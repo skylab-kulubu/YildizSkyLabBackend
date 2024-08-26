@@ -33,4 +33,3 @@ Sql queryies tool [sqlc] (https://sqlc.dev)
   ### run
   ```bash
 	./bin/fs
-	```
