@@ -157,7 +157,12 @@ func (s *Server) addTeamLead(c *gin.Context) {
 		return
 	}
 
-	// do same shit for users
+	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
 	teamLead, err := s.query.CreateTeamLead(c, sqlc.CreateTeamLeadParams{
 		TeamID: req.TeamID,
@@ -218,7 +223,12 @@ func (s *Server) addTeamProject(c *gin.Context) {
 		return
 	}
 
-	// do same shit for users
+	_, err = s.query.GetProject(c, req.ProjectID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
 	teamProject, err := s.query.CreateTeamProject(c, sqlc.CreateTeamProjectParams{
 		TeamID:    req.TeamID,
@@ -279,7 +289,12 @@ func (s *Server) addTeamMember(c *gin.Context) {
 		return
 	}
 
-	// do same shit for users
+	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
 	teamMember, err := s.query.CreateTeamMember(c, sqlc.CreateTeamMemberParams{
 		TeamID: req.TeamID,

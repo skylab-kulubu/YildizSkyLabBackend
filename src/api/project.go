@@ -158,7 +158,12 @@ func (s *Server) addProjectLead(c *gin.Context) {
 		return
 	}
 
-	// do same shit for users
+	_, err = s.query.GetUser(c, req.UserID) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
 	projectLead, err := s.query.CreateProjectLead(c, sqlc.CreateProjectLeadParams{
 		ProjectID: req.ProjectID,
@@ -219,7 +224,12 @@ func (s *Server) addProjectMember(c *gin.Context) {
 		return
 	}
 
-	// do same shit for users
+	_, err = s.query.GetUser(c, req.UserID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
 
 	projectMember, err := s.query.CreateProjectMember(c, sqlc.CreateProjectMemberParams{
 		ProjectID: req.ProjectID,
