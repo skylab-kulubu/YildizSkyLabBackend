@@ -45,3 +45,21 @@ func (q *Queries) DeleteProjectMember(ctx context.Context, arg DeleteProjectMemb
 	_, err := q.db.ExecContext(ctx, deleteProjectMember, arg.UserID, arg.ProjectID)
 	return err
 }
+
+const deleteProjectMemberByProjectId = `-- name: DeleteProjectMemberByProjectId :exec
+UPDATE project_users SET deleted_at = NOW() WHERE project_id = $1
+`
+
+func (q *Queries) DeleteProjectMemberByProjectId(ctx context.Context, projectID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteProjectMemberByProjectId, projectID)
+	return err
+}
+
+const deleteProjectMemberByUserId = `-- name: DeleteProjectMemberByUserId :exec
+UPDATE project_users SET deleted_at = NOW() WHERE user_id= $1
+`
+
+func (q *Queries) DeleteProjectMemberByUserId(ctx context.Context, userID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteProjectMemberByUserId, userID)
+	return err
+}

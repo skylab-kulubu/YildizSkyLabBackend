@@ -10,6 +10,33 @@ import (
 	"time"
 )
 
+const checkUserIfExistByEmail = `-- name: CheckUserIfExistByEmail :one
+SELECT id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at FROM users
+WHERE email = $1
+`
+
+func (q *Queries) CheckUserIfExistByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, checkUserIfExistByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.LastName,
+		&i.Email,
+		&i.Password,
+		&i.TelephoneNumber,
+		&i.University,
+		&i.Department,
+		&i.DateOfBirth,
+		&i.Role,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     name,
@@ -320,6 +347,74 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Active,
 		&i.TeamNames,
 		&i.ProjectNames,
+	)
+	return i, err
+}
+
+const overwriteUser = `-- name: OverwriteUser :one
+UPDATE users SET
+    name = $2,
+    last_name = $3,
+    email = $4,
+    password = $5,
+    telephone_number = $6,
+    role = $7,
+    university = $8,
+    department = $9,
+    date_of_birth = $10,
+    active = $11,
+    created_at = NOW(),
+    updated_at = NOW(),
+    deleted_at = NULL
+WHERE
+    id = $1
+returning id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at
+`
+
+type OverwriteUserParams struct {
+	ID              int32     `json:"id"`
+	Name            string    `json:"name"`
+	LastName        string    `json:"last_name"`
+	Email           string    `json:"email"`
+	Password        string    `json:"password"`
+	TelephoneNumber string    `json:"telephone_number"`
+	Role            string    `json:"role"`
+	University      string    `json:"university"`
+	Department      string    `json:"department"`
+	DateOfBirth     time.Time `json:"date_of_birth"`
+	Active          bool      `json:"active"`
+}
+
+func (q *Queries) OverwriteUser(ctx context.Context, arg OverwriteUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, overwriteUser,
+		arg.ID,
+		arg.Name,
+		arg.LastName,
+		arg.Email,
+		arg.Password,
+		arg.TelephoneNumber,
+		arg.Role,
+		arg.University,
+		arg.Department,
+		arg.DateOfBirth,
+		arg.Active,
+	)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.LastName,
+		&i.Email,
+		&i.Password,
+		&i.TelephoneNumber,
+		&i.University,
+		&i.Department,
+		&i.DateOfBirth,
+		&i.Role,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

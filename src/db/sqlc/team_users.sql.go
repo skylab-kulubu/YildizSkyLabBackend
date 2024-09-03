@@ -45,3 +45,21 @@ func (q *Queries) DeleteTeamMember(ctx context.Context, arg DeleteTeamMemberPara
 	_, err := q.db.ExecContext(ctx, deleteTeamMember, arg.TeamID, arg.UserID)
 	return err
 }
+
+const deleteTeamMemberByTeamId = `-- name: DeleteTeamMemberByTeamId :exec
+UPDATE team_users SET deleted_at = NOW() WHERE team_id = $1
+`
+
+func (q *Queries) DeleteTeamMemberByTeamId(ctx context.Context, teamID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTeamMemberByTeamId, teamID)
+	return err
+}
+
+const deleteTeamMemberByUserId = `-- name: DeleteTeamMemberByUserId :exec
+UPDATE team_users SET deleted_at = NOW() WHERE user_id = $1
+`
+
+func (q *Queries) DeleteTeamMemberByUserId(ctx context.Context, userID int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTeamMemberByUserId, userID)
+	return err
+}

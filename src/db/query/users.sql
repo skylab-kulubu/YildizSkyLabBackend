@@ -90,6 +90,11 @@ WHERE
 GROUP BY
 		u.id, u.email;
 
+
+-- name: CheckUserIfExistByEmail :one
+SELECT * FROM users
+WHERE email = $1;
+
 -- name: CreateUser :one
 INSERT INTO users (
     name,
@@ -141,3 +146,23 @@ UPDATE users SET
     deleted_at = NOW()
 WHERE
     id = $1;
+
+
+-- name: OverwriteUser :one
+UPDATE users SET
+    name = $2,
+    last_name = $3,
+    email = $4,
+    password = $5,
+    telephone_number = $6,
+    role = $7,
+    university = $8,
+    department = $9,
+    date_of_birth = $10,
+    active = $11,
+    created_at = NOW(),
+    updated_at = NOW(),
+    deleted_at = NULL
+WHERE
+    id = $1
+returning *;
