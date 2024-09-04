@@ -81,6 +81,14 @@ func (s *Server) getProject(c *gin.Context) {
 		return
 	}
 
+	if ok := s.checkIfUserIsProjectLead(c, project.ProjectID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Project got successfully",
@@ -149,6 +157,14 @@ func (s *Server) updateProject(c *gin.Context) {
 		return
 	}
 
+	if ok := s.checkIfUserIsProjectLead(c, req.ID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
+		})
+		return
+	}
+
 	updatedProject, err := s.query.UpdateProject(c, sqlc.UpdateProjectParams{
 		ID:          req.ID,
 		Name:        req.Name,
@@ -183,6 +199,14 @@ func (s *Server) deleteProject(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, Response{
 			IsSuccess: false,
 			Message:   err.Error(),
+		})
+		return
+	}
+
+	if ok := s.checkIfUserIsProjectLead(c, req.ID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
 		})
 		return
 	}
@@ -319,7 +343,7 @@ func (s *Server) addProjectMember(c *gin.Context) {
 		return
 	}
 
-	_, err := s.query.GetProject(c, req.ProjectID) // need a better solition but work for now
+	project, err := s.query.GetProject(c, req.ProjectID) // need a better solition but work for now
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{
@@ -335,6 +359,14 @@ func (s *Server) addProjectMember(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, Response{
 			IsSuccess: false,
 			Message:   "User not found",
+		})
+		return
+	}
+
+	if ok := s.checkIfUserIsProjectLead(c, project.ProjectID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
 		})
 		return
 	}
@@ -378,6 +410,14 @@ func (s *Server) removeProjectMember(c *gin.Context) {
 		return
 	}
 
+	if ok := s.checkIfUserIsProjectLead(c, req.ProjectID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
+		})
+		return
+	}
+
 	err := s.query.DeleteProjectMember(c, sqlc.DeleteProjectMemberParams{
 		ProjectID: req.ProjectID,
 		UserID:    req.UserID,
@@ -397,4 +437,30 @@ func (s *Server) removeProjectMember(c *gin.Context) {
 	})
 }
 
-////////////////////////
+// //////////////////////
+// checkIfUserIsTeamLead checks if the user is team lead
+func (s *Server) checkIfUserIsProjectLead(c *gin.Context, projectID int32) bool {
+
+	anyUser, ok := c.Get("user")
+	if !ok {
+		return false
+	}
+
+	user := anyUser.(sqlc.User)
+
+	if user.Role == "admin" {
+		return true
+	}
+
+	_, err := s.query.GetProjectLead(c, sqlc.GetProjectLeadParams{
+		ProjectID: projectID,
+		UserID:    user.ID,
+	})
+
+	if err != nil {
+		return false
+	}
+
+	return true
+
+}
