@@ -45,3 +45,26 @@ func (q *Queries) DeleteProjectLead(ctx context.Context, arg DeleteProjectLeadPa
 	_, err := q.db.ExecContext(ctx, deleteProjectLead, arg.ProjectID, arg.UserID)
 	return err
 }
+
+const getProjectLead = `-- name: GetProjectLead :one
+SELECT id, project_id, user_id, created_at, updated_at, deleted_at FROM project_leads WHERE project_id = $1 AND user_id = $2
+`
+
+type GetProjectLeadParams struct {
+	ProjectID int32 `json:"project_id"`
+	UserID    int32 `json:"user_id"`
+}
+
+func (q *Queries) GetProjectLead(ctx context.Context, arg GetProjectLeadParams) (ProjectLead, error) {
+	row := q.db.QueryRowContext(ctx, getProjectLead, arg.ProjectID, arg.UserID)
+	var i ProjectLead
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
