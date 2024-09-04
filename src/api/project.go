@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CREATE PROJECT
 type createProjectRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
@@ -18,7 +19,10 @@ func (s *Server) createProject(c *gin.Context) {
 	var req createProjectRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -28,13 +32,23 @@ func (s *Server) createProject(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, project)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project created successfully",
+		Data:      project,
+	})
 }
 
+////////////////////////
+
+// GET PROJECT
 type getProjectRequest struct {
 	ID int32 `uri:"id" binding:"required,min=1"`
 }
@@ -43,7 +57,10 @@ func (s *Server) getProject(c *gin.Context) {
 	var req getProjectRequest
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -51,16 +68,29 @@ func (s *Server) getProject(c *gin.Context) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, errorResponse(err))
+			c.JSON(http.StatusNotFound, Response{
+				IsSuccess: false,
+				Message:   "Project not found",
+			})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, project)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project got successfully",
+		Data:      project,
+	})
 }
 
+////////////////////////
+
+// GET ALL PROJECTS
 type getAllProjectsRequest struct {
 	PageID   int32 `form:"page_id" binding:"required,min=1"`
 	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
@@ -70,7 +100,10 @@ func (s *Server) getAllProjects(c *gin.Context) {
 	var req getAllProjectsRequest
 
 	if err := c.ShouldBindQuery(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -82,13 +115,23 @@ func (s *Server) getAllProjects(c *gin.Context) {
 	projects, err := s.query.GetAllProjects(c, arg)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, projects)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Projects got successfully",
+		Data:      projects,
+	})
 }
 
+////////////////////////
+
+// UPDATE PROJECT
 type updateProjectRequest struct {
 	ID          int32  `json:"id" binding:"required,min=1"`
 	Name        string `json:"name" binding:"required"`
@@ -99,7 +142,10 @@ func (s *Server) updateProject(c *gin.Context) {
 	var req updateProjectRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -110,12 +156,22 @@ func (s *Server) updateProject(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 	}
 
-	c.JSON(http.StatusOK, updatedProject)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project updated successfully",
+		Data:      updatedProject,
+	})
 }
 
+////////////////////////
+
+// DELETE PROJECT
 type deleteProjectRequest struct {
 	ID int32 `uri:"id" binding:"required,min=1"`
 }
@@ -124,20 +180,32 @@ func (s *Server) deleteProject(c *gin.Context) {
 	var req deleteProjectRequest
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
 	err := s.query.DeleteProject(c, req.ID)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project deleted successfully",
+	})
 }
 
+////////////////////////
+
+// ADD PROJECT LEAD
 type addProjectLeadRequest struct {
 	ProjectID int32 `json:"project_id" binding:"required,min=1"`
 	UserID    int32 `json:"user_id" binding:"required,min=1"`
@@ -147,21 +215,30 @@ func (s *Server) addProjectLead(c *gin.Context) {
 	var req addProjectLeadRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
 	_, err := s.query.GetProject(c, req.ProjectID) // need a better solition but work for now
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "Project not found",
+		})
 		return
 	}
 
 	_, err = s.query.GetUser(c, req.UserID) // need a better solition but work for now
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "User not found",
+		})
 		return
 	}
 
@@ -171,13 +248,23 @@ func (s *Server) addProjectLead(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, projectLead)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project lead added successfully",
+		Data:      projectLead,
+	})
 }
 
+////////////////////////
+
+// REMOVE PROJECT LEAD
 type removeProjectLeadRequest struct {
 	ProjectID int32 `json:"project_id" binding:"required,min=1"`
 	UserID    int32 `json:"user_id" binding:"required,min=1"`
@@ -187,7 +274,10 @@ func (s *Server) removeProjectLead(c *gin.Context) {
 	var req removeProjectLeadRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -197,13 +287,22 @@ func (s *Server) removeProjectLead(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project lead removed successfully",
+	})
 }
 
+////////////////////////
+
+// ADD PROJECT MEMBER
 type addProjectMemberRequest struct {
 	ProjectID int32 `json:"project_id" binding:"required,min=1"`
 	UserID    int32 `json:"user_id" binding:"required,min=1"`
@@ -213,21 +312,30 @@ func (s *Server) addProjectMember(c *gin.Context) {
 	var req addProjectMemberRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
 	_, err := s.query.GetProject(c, req.ProjectID) // need a better solition but work for now
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "Project not found",
+		})
 		return
 	}
 
 	_, err = s.query.GetUser(c, req.UserID)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "User not found",
+		})
 		return
 	}
 
@@ -237,13 +345,23 @@ func (s *Server) addProjectMember(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, projectMember)
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project member added successfully",
+		Data:      projectMember,
+	})
 }
 
+////////////////////////
+
+// REMOVE PROJECT MEMBER
 type removeProjectMemberRequest struct {
 	ProjectID int32 `json:"project_id" binding:"required,min=1"`
 	UserID    int32 `json:"user_id" binding:"required,min=1"`
@@ -253,7 +371,10 @@ func (s *Server) removeProjectMember(c *gin.Context) {
 	var req removeProjectMemberRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errorResponse(err))
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
@@ -263,9 +384,17 @@ func (s *Server) removeProjectMember(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorResponse(err))
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "success"})
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project member removed successfully",
+	})
 }
+
+////////////////////////

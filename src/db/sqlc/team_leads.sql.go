@@ -45,3 +45,26 @@ func (q *Queries) DeleteTeamLead(ctx context.Context, arg DeleteTeamLeadParams) 
 	_, err := q.db.ExecContext(ctx, deleteTeamLead, arg.TeamID, arg.UserID)
 	return err
 }
+
+const getTeamLead = `-- name: GetTeamLead :one
+SELECT id, team_id, user_id, created_at, updated_at, deleted_at FROM team_leads WHERE team_id = $1 AND user_id = $2
+`
+
+type GetTeamLeadParams struct {
+	TeamID int32 `json:"team_id"`
+	UserID int32 `json:"user_id"`
+}
+
+func (q *Queries) GetTeamLead(ctx context.Context, arg GetTeamLeadParams) (TeamLead, error) {
+	row := q.db.QueryRowContext(ctx, getTeamLead, arg.TeamID, arg.UserID)
+	var i TeamLead
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}

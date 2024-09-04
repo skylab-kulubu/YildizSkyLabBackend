@@ -28,7 +28,10 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+			ctx.JSON(http.StatusUnauthorized, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
 			return
 		}
 
@@ -65,4 +68,26 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 		return
 	}
 
+}
+
+func (s *Server) RequireRole(roles []string, f gin.HandlerFunc) gin.HandlerFunc {
+
+	return func(ctx *gin.Context) {
+		anyUser, ok := ctx.Get("user")
+		if !ok {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		user := anyUser.(sqlc.User)
+
+		for _, v := range roles {
+			if user.Role == v {
+				f(ctx)
+				return
+			}
+		}
+
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+	}
 }
