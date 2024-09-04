@@ -10,11 +10,11 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func (s *Server) RequireAuth(ctx *gin.Context) {
-	tokenString, err := ctx.Cookie("Auth")
+func (s *Server) RequireAuth(c *gin.Context) {
+	tokenString, err := c.Cookie("Auth")
 
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
@@ -28,7 +28,7 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			ctx.JSON(http.StatusUnauthorized, Response{
+			c.JSON(http.StatusUnauthorized, Response{
 				IsSuccess: false,
 				Message:   err.Error(),
 			})
@@ -39,7 +39,7 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 
 		intID := int32(id.(float64))
 
-		userRow, err := s.query.GetUser(ctx, intID)
+		userRow, err := s.query.GetUser(c, intID)
 
 		user := sqlc.User{
 			ID:              userRow.UserID,
@@ -56,15 +56,15 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 		}
 
 		if err != nil {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		ctx.Set("user", user)
+		c.Set("user", user)
 
-		ctx.Next()
+		c.Next()
 	} else {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
@@ -72,10 +72,10 @@ func (s *Server) RequireAuth(ctx *gin.Context) {
 
 func (s *Server) RequireRole(roles []string, f gin.HandlerFunc) gin.HandlerFunc {
 
-	return func(ctx *gin.Context) {
-		anyUser, ok := ctx.Get("user")
+	return func(c *gin.Context) {
+		anyUser, ok := c.Get("user")
 		if !ok {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
+			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
@@ -83,11 +83,11 @@ func (s *Server) RequireRole(roles []string, f gin.HandlerFunc) gin.HandlerFunc 
 
 		for _, v := range roles {
 			if user.Role == v {
-				f(ctx)
+				f(c)
 				return
 			}
 		}
 
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 }
