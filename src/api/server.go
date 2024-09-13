@@ -34,8 +34,8 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.GET("/teams", server.RequireAuth, server.getAllTeams)
 	router.PUT("/teams/", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.updateTeam))
 	router.DELETE("/teams/:id", server.RequireAuth, server.RequireRole([]string{admin}, server.deleteTeam))
-	//router.POST("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.addTeamLead))
-	//router.DELETE("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.removeTeamLead))
+	router.POST("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.addTeamLead))
+	router.DELETE("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.removeTeamLead))
 	router.POST("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamProject))
 	router.DELETE("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.removeTeamProject))
 	router.POST("/teams/member", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamMember))
@@ -48,7 +48,6 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.GET("/users", server.RequireAuth, server.getAllUsers)
 	router.PUT("/users/", server.RequireAuth, server.updateUser)
 	router.DELETE("/users/:id", server.RequireAuth, server.deleteUser)
-	router.PUT("/users/role", server.RequireAuth, server.bindRoleToUser)
 
 	//project
 	router.POST("/projects", server.RequireAuth, server.createProject)
@@ -67,7 +66,6 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 }
 
 func (s *Server) Start(address string) error {
-
 	return s.router.Run(address)
 }
 

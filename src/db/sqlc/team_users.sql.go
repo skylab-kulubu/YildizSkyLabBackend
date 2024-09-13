@@ -10,23 +10,21 @@ import (
 )
 
 const createTeamMember = `-- name: CreateTeamMember :one
-INSERT INTO team_users (team_id,user_id,role,created_at,updated_at) values ($1,$2,$3,NOW(),NOW()) RETURNING id, team_id, user_id, role, created_at, updated_at, deleted_at
+INSERT INTO team_users (team_id,user_id,created_at,updated_at) values ($1,$2,NOW(),NOW()) RETURNING id, team_id, user_id, created_at, updated_at, deleted_at
 `
 
 type CreateTeamMemberParams struct {
-	TeamID int32  `json:"team_id"`
-	UserID int32  `json:"user_id"`
-	Role   string `json:"role"`
+	TeamID int32 `json:"team_id"`
+	UserID int32 `json:"user_id"`
 }
 
 func (q *Queries) CreateTeamMember(ctx context.Context, arg CreateTeamMemberParams) (TeamUser, error) {
-	row := q.db.QueryRowContext(ctx, createTeamMember, arg.TeamID, arg.UserID, arg.Role)
+	row := q.db.QueryRowContext(ctx, createTeamMember, arg.TeamID, arg.UserID)
 	var i TeamUser
 	err := row.Scan(
 		&i.ID,
 		&i.TeamID,
 		&i.UserID,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

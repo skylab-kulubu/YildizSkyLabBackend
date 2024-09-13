@@ -11,7 +11,7 @@ import (
 )
 
 const checkUserIfExistByEmail = `-- name: CheckUserIfExistByEmail :one
-SELECT id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at FROM users
+SELECT id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at FROM users
 WHERE email = $1
 `
 
@@ -29,6 +29,7 @@ func (q *Queries) CheckUserIfExistByEmail(ctx context.Context, email string) (Us
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
+		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -47,6 +48,7 @@ INSERT INTO users (
     university,
     department,
     date_of_birth,
+    active,
     created_at,
     updated_at
 ) VALUES (
@@ -59,9 +61,10 @@ INSERT INTO users (
     $7,
     $8,
     $9,
+    $10,
     NOW(),
     NOW()
-) RETURNING id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at
+) RETURNING id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -74,6 +77,7 @@ type CreateUserParams struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
+	Active          bool      `json:"active"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -87,6 +91,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.University,
 		arg.Department,
 		arg.DateOfBirth,
+		arg.Active,
 	)
 	var i User
 	err := row.Scan(
@@ -100,6 +105,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
+		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -131,6 +137,7 @@ SELECT
 	u.university,
 	u.department,
 	u.date_of_birth,
+	u.active,
 	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -166,6 +173,7 @@ type GetAllUsersRow struct {
 	University      string      `json:"university"`
 	Department      string      `json:"department"`
 	DateOfBirth     time.Time   `json:"date_of_birth"`
+	Active          bool        `json:"active"`
 	TeamNames       interface{} `json:"team_names"`
 	ProjectNames    interface{} `json:"project_names"`
 }
@@ -190,6 +198,7 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Get
 			&i.University,
 			&i.Department,
 			&i.DateOfBirth,
+			&i.Active,
 			&i.TeamNames,
 			&i.ProjectNames,
 		); err != nil {
@@ -218,6 +227,7 @@ SELECT
 	u.university,
 	u.department,
 	u.date_of_birth,
+	u.active,
 	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -247,6 +257,7 @@ type GetUserRow struct {
 	University      string      `json:"university"`
 	Department      string      `json:"department"`
 	DateOfBirth     time.Time   `json:"date_of_birth"`
+	Active          bool        `json:"active"`
 	TeamNames       interface{} `json:"team_names"`
 	ProjectNames    interface{} `json:"project_names"`
 }
@@ -265,6 +276,7 @@ func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
 		&i.University,
 		&i.Department,
 		&i.DateOfBirth,
+		&i.Active,
 		&i.TeamNames,
 		&i.ProjectNames,
 	)
@@ -283,6 +295,7 @@ SELECT
 		u.university,
 		u.department,
 		u.date_of_birth,
+		u.active,
 		COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 		COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -312,6 +325,7 @@ type GetUserByEmailRow struct {
 	University      string      `json:"university"`
 	Department      string      `json:"department"`
 	DateOfBirth     time.Time   `json:"date_of_birth"`
+	Active          bool        `json:"active"`
 	TeamNames       interface{} `json:"team_names"`
 	ProjectNames    interface{} `json:"project_names"`
 }
@@ -330,6 +344,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.University,
 		&i.Department,
 		&i.DateOfBirth,
+		&i.Active,
 		&i.TeamNames,
 		&i.ProjectNames,
 	)
@@ -347,12 +362,13 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
+    active = $11,
     created_at = NOW(),
     updated_at = NOW(),
     deleted_at = NULL
 WHERE
     id = $1
-returning id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at
+returning id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at
 `
 
 type OverwriteUserParams struct {
@@ -366,6 +382,7 @@ type OverwriteUserParams struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
+	Active          bool      `json:"active"`
 }
 
 func (q *Queries) OverwriteUser(ctx context.Context, arg OverwriteUserParams) (User, error) {
@@ -380,6 +397,7 @@ func (q *Queries) OverwriteUser(ctx context.Context, arg OverwriteUserParams) (U
 		arg.University,
 		arg.Department,
 		arg.DateOfBirth,
+		arg.Active,
 	)
 	var i User
 	err := row.Scan(
@@ -393,6 +411,7 @@ func (q *Queries) OverwriteUser(ctx context.Context, arg OverwriteUserParams) (U
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
+		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -411,10 +430,11 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
+    active = $11,
     updated_at = NOW()
 WHERE
     id = $1
-returning id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at
+returning id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, active, created_at, updated_at, deleted_at
 `
 
 type UpdateUserParams struct {
@@ -428,6 +448,7 @@ type UpdateUserParams struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
+	Active          bool      `json:"active"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -442,6 +463,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.University,
 		arg.Department,
 		arg.DateOfBirth,
+		arg.Active,
 	)
 	var i User
 	err := row.Scan(
@@ -455,6 +477,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
+		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
