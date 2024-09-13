@@ -18,6 +18,7 @@ const (
 )
 
 type returnUserResponse struct {
+	Id              int32     `json:"id"`
 	Name            string    `json:"name"`
 	LastName        string    `json:"last_name"`
 	Email           string    `json:"email"`
@@ -179,23 +180,31 @@ func (s *Server) login(c *gin.Context) {
 		})
 		return
 	}
+	/*
 
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("Auth", tokenString, 3600*24, "", "", false, true)
+		c.SetSameSite(http.SameSiteLaxMode)
+		c.SetCookie("Auth", tokenString, 3600*24, "", "", false, true)
+
+
+			c.JSON(http.StatusOK, Response{
+				IsSuccess: true,
+				Message:   "User logged in successfully",
+				Data: returnUserResponse{
+					Name:            user.Name,
+					LastName:        user.LastName,
+					Email:           user.Email,
+					TelephoneNumber: user.TelephoneNumber,
+					University:      user.University,
+					Department:      user.Department,
+					DateOfBirth:     user.DateOfBirth,
+					Role:            user.Role,
+				},
+			})*/
 
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
-		Message:   "User logged in successfully",
-		Data: returnUserResponse{
-			Name:            user.Name,
-			LastName:        user.LastName,
-			Email:           user.Email,
-			TelephoneNumber: user.TelephoneNumber,
-			University:      user.University,
-			Department:      user.Department,
-			DateOfBirth:     user.DateOfBirth,
-			Role:            user.Role,
-		},
+		Message:   "User loggedin successfully",
+		Data:      tokenString,
 	})
 }
 
@@ -246,6 +255,7 @@ func (s *Server) getUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User got successfully",
 		Data: returnUserResponse{
+			Id:              user.UserID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -294,6 +304,7 @@ func (s *Server) getAllUsers(c *gin.Context) {
 
 	for i, user := range users {
 		returnUsers[i] = returnUserResponse{
+			Id:              user.UserID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -373,6 +384,7 @@ func (s *Server) updateUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User updated successfully",
 		Data: returnUserResponse{
+			Id:              updatedUser.ID,
 			Name:            updatedUser.Name,
 			LastName:        updatedUser.LastName,
 			Email:           updatedUser.Email,

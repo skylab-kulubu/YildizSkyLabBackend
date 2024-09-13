@@ -2,19 +2,33 @@ version: "3.9"
 services:
   postgres:
     image: postgres:latest
+    restart: unless-stopped
     environment:
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=54321
       - POSTGRES_DB=yildizskylab
-  api:
+    ports:
+      - "5433:5432"
+    networks:
+      - nginx-network
+
+  yildizskylab-app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "9002:8080"
+    restart: unless-stopped
     environment:
       - DB_SOURCE=postgresql://root:54321@postgres:5432/yildizskylab?sslmode=disable
     depends_on:
       - postgres
-    entrypoint: ["/app/wait-for.sh", "postgres:5432", "--", "/app/start.sh"]
+    entrypoint: ["/app/wait-for.sh","postgres:5432", "--", "/app/start.sh"]
     command: ["/app/main"]
+    networks:
+      - nginx-network
+
+
+networks:
+    nginx-network:
+        external: true
