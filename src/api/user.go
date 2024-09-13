@@ -39,8 +39,6 @@ type signupRequest struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
-	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) signup(c *gin.Context) {
@@ -85,8 +83,7 @@ func (s *Server) signup(c *gin.Context) {
 			University:      req.University,
 			Department:      req.Department,
 			DateOfBirth:     req.DateOfBirth,
-			Role:            req.Role,
-			Active:          req.Active,
+			Role:            "member",
 		})
 
 	case deleted:
@@ -180,26 +177,6 @@ func (s *Server) login(c *gin.Context) {
 		})
 		return
 	}
-	/*
-
-		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("Auth", tokenString, 3600*24, "", "", false, true)
-
-
-			c.JSON(http.StatusOK, Response{
-				IsSuccess: true,
-				Message:   "User logged in successfully",
-				Data: returnUserResponse{
-					Name:            user.Name,
-					LastName:        user.LastName,
-					Email:           user.Email,
-					TelephoneNumber: user.TelephoneNumber,
-					University:      user.University,
-					Department:      user.Department,
-					DateOfBirth:     user.DateOfBirth,
-					Role:            user.Role,
-				},
-			})*/
 
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
@@ -337,7 +314,6 @@ type updateUserRequest struct {
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
 	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) updateUser(c *gin.Context) {
@@ -370,7 +346,6 @@ func (s *Server) updateUser(c *gin.Context) {
 		Department:      req.Department,
 		DateOfBirth:     req.DateOfBirth,
 		Role:            req.Role,
-		Active:          req.Active,
 	})
 
 	if err != nil {
@@ -490,8 +465,7 @@ func (s *Server) overwriteUser(c *gin.Context, user sqlc.User) (sqlc.User, error
 		University:      user.University,
 		Department:      user.Department,
 		DateOfBirth:     user.DateOfBirth,
-		Role:            user.Role,
-		Active:          user.Active,
+		Role:            "member",
 	}
 
 	return s.query.OverwriteUser(c, arg)
@@ -505,6 +479,10 @@ func (s *Server) checkUserPermission(c *gin.Context, userId int32) bool {
 	}
 
 	user := anyUser.(sqlc.User)
+
+	if user.Role == "admin" {
+		return true
+	}
 
 	if user.ID == userId {
 		return true

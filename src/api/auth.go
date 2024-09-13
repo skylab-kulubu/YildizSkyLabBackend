@@ -63,7 +63,6 @@ func (s *Server) RequireAuth(c *gin.Context) {
 			Department:      userRow.Department,
 			DateOfBirth:     userRow.DateOfBirth,
 			Role:            userRow.Role,
-			Active:          userRow.Active,
 		}
 
 		if err != nil {

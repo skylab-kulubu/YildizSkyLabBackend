@@ -63,7 +63,7 @@ UPDATE projects set
     updated_at = NOW()
 WHERE
     id = $3
-RETURNING id;
+RETURNING *;
 
 -- name: DeleteProject :exec
 UPDATE projects set

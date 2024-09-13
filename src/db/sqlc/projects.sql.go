@@ -171,7 +171,7 @@ UPDATE projects set
     updated_at = NOW()
 WHERE
     id = $3
-RETURNING id
+RETURNING id, name, description, created_at, updated_at, deleted_at
 `
 
 type UpdateProjectParams struct {
@@ -180,9 +180,16 @@ type UpdateProjectParams struct {
 	ID          int32  `json:"id"`
 }
 
-func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (int32, error) {
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
 	row := q.db.QueryRowContext(ctx, updateProject, arg.Name, arg.Description, arg.ID)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }
