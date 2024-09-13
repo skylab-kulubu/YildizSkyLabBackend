@@ -8,13 +8,13 @@ SELECT
 FROM
     teams t
 LEFT JOIN
-    team_leads tl on t.id = tl.team_id
+    team_users tu ON t.id = tu.team_id AND tu.role = 'lead'
 LEFT JOIN
-    users u on tl.user_id = u.id
+    users u ON tu.user_id = u.id
 LEFT JOIN
-    team_projects tp on t.id = tp.team_id
+    team_projects tp ON t.id = tp.team_id
 LEFT JOIN
-    projects p on tp.project_id = p.id
+    projects p ON tp.project_id = p.id
 WHERE
     t.deleted_at IS NULL
 GROUP BY
@@ -31,13 +31,13 @@ SELECT
 FROM
     teams t
 LEFT JOIN
-    team_leads tl on t.id = tl.team_id
+    team_users tu ON t.id = tu.team_id AND tu.role = 'lead'
 LEFT JOIN
-    users u on tl.user_id = u.id
+    users u ON tu.user_id = u.id
 LEFT JOIN
-    team_projects tp on t.id = tp.team_id
+    team_projects tp ON t.id = tp.team_id
 LEFT JOIN
-    projects p on tp.project_id = p.id
+    projects p ON tp.project_id = p.id
 WHERE
     t.deleted_at IS NULL AND t.id = $1
 GROUP BY

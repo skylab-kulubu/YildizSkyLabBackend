@@ -18,6 +18,7 @@ const (
 )
 
 type returnUserResponse struct {
+	Id              int32     `json:"id"`
 	Name            string    `json:"name"`
 	LastName        string    `json:"last_name"`
 	Email           string    `json:"email"`
@@ -38,8 +39,6 @@ type signupRequest struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
-	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) signup(c *gin.Context) {
@@ -84,8 +83,7 @@ func (s *Server) signup(c *gin.Context) {
 			University:      req.University,
 			Department:      req.Department,
 			DateOfBirth:     req.DateOfBirth,
-			Role:            req.Role,
-			Active:          req.Active,
+			Role:            "member",
 		})
 
 	case deleted:
@@ -104,6 +102,7 @@ func (s *Server) signup(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User created successfully",
 		Data: returnUserResponse{
+			Id:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -187,6 +186,7 @@ func (s *Server) login(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User logged in successfully",
 		Data: returnUserResponse{
+			Id:              user.UserID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -246,6 +246,7 @@ func (s *Server) getUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User got successfully",
 		Data: returnUserResponse{
+			Id:              user.UserID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -294,6 +295,7 @@ func (s *Server) getAllUsers(c *gin.Context) {
 
 	for i, user := range users {
 		returnUsers[i] = returnUserResponse{
+			Id:              user.UserID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -326,7 +328,6 @@ type updateUserRequest struct {
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
 	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) updateUser(c *gin.Context) {
@@ -359,7 +360,6 @@ func (s *Server) updateUser(c *gin.Context) {
 		Department:      req.Department,
 		DateOfBirth:     req.DateOfBirth,
 		Role:            req.Role,
-		Active:          req.Active,
 	})
 
 	if err != nil {
@@ -373,6 +373,7 @@ func (s *Server) updateUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User updated successfully",
 		Data: returnUserResponse{
+			Id:              updatedUser.ID,
 			Name:            updatedUser.Name,
 			LastName:        updatedUser.LastName,
 			Email:           updatedUser.Email,
@@ -449,6 +450,57 @@ func (s *Server) deleteUser(c *gin.Context) {
 
 ////////////////////////
 
+// BIND ROLE TO USER
+
+type bindRoleToUserRequest struct {
+	UserId int32  `json:"user_id" binding:"required,min=1"`
+	Role   string `json:"role" binding:"required"`
+}
+
+func (s *Server) bindRoleToUser(c *gin.Context) {
+
+	var req bindRoleToUserRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	user, err := s.query.UpdateUser(c, sqlc.UpdateUserParams{
+		ID:   req.UserId,
+		Role: req.Role,
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "binded successfully",
+		Data: returnUserResponse{
+			Id:              user.ID,
+			Name:            user.Name,
+			LastName:        user.LastName,
+			Email:           user.Email,
+			TelephoneNumber: user.TelephoneNumber,
+			University:      user.University,
+			Department:      user.Department,
+			DateOfBirth:     user.DateOfBirth,
+			Role:            user.Role,
+		},
+	})
+}
+
+//
+
 // UTILS
 
 func (s *Server) checkUserIfNotExistByEmail(c *gin.Context, email string) (int, sqlc.User) {
@@ -478,8 +530,7 @@ func (s *Server) overwriteUser(c *gin.Context, user sqlc.User) (sqlc.User, error
 		University:      user.University,
 		Department:      user.Department,
 		DateOfBirth:     user.DateOfBirth,
-		Role:            user.Role,
-		Active:          user.Active,
+		Role:            "member",
 	}
 
 	return s.query.OverwriteUser(c, arg)

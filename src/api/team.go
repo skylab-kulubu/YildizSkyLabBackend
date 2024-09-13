@@ -228,6 +228,7 @@ func (s *Server) deleteTeam(c *gin.Context) {
 
 ///////////////////////////////
 
+/*
 // ADD TEAM LEAD
 type addTeamLeadRequest struct {
 	TeamID int32 `json:"team_id" binding:"required,min=1"`
@@ -272,7 +273,7 @@ func (s *Server) addTeamLead(c *gin.Context) {
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
-			IsSuccess: false,
+		IsSuccess: false,
 			Message:   err.Error(),
 		})
 		return
@@ -289,9 +290,10 @@ type removeTeamLeadRequest struct {
 	TeamID int32 `json:"team_id" binding:"required,min=1"`
 	UserId int32 `json:"user_id" binding:"required,min=1"`
 }
-
+*/
 ///////////////////////////////
 
+/*
 // REMOVE TEAM LEAD
 func (s *Server) removeTeamLead(c *gin.Context) {
 	var req removeTeamLeadRequest
@@ -322,7 +324,7 @@ func (s *Server) removeTeamLead(c *gin.Context) {
 		Message:   "Team lead removed successfully",
 	})
 }
-
+*/
 ///////////////////////////////
 
 // ADD TEAM PROJECT
@@ -440,8 +442,9 @@ func (s *Server) removeTeamProject(c *gin.Context) {
 
 // ADD TEAM MEMBER
 type addTeamMemberRequest struct {
-	TeamID int32 `json:"team_id" binding:"required,min=1"`
-	UserId int32 `json:"user_id" binding:"required,min=1"`
+	TeamID int32  `json:"team_id" binding:"required,min=1"`
+	UserId int32  `json:"user_id" binding:"required,min=1"`
+	Role   string `json:"role"`
 }
 
 func (s *Server) addTeamMember(c *gin.Context) {
@@ -486,6 +489,7 @@ func (s *Server) addTeamMember(c *gin.Context) {
 	teamMember, err := s.query.CreateTeamMember(c, sqlc.CreateTeamMemberParams{
 		TeamID: req.TeamID,
 		UserID: req.UserId,
+		Role:   req.Role,
 	})
 
 	if err != nil {
@@ -555,25 +559,27 @@ func (s *Server) removeTeamMember(c *gin.Context) {
 // checkIfUserIsTeamLead checks if the user is team lead
 func (s *Server) checkIfUserIsTeamLead(c *gin.Context, teamID int32) bool {
 
-	anyUser, ok := c.Get("user")
-	if !ok {
-		return false
-	}
+	/*
+		anyUser, ok := c.Get("user")
+		if !ok {
+			return false
+		}
 
-	user := anyUser.(sqlc.User)
+		user := anyUser.(sqlc.User)
 
-	if user.Role == "admin" {
-		return true
-	}
+		if user.Role == "admin" {
+			return true
+		}
 
-	_, err := s.query.GetTeamLead(c, sqlc.GetTeamLeadParams{
-		TeamID: teamID,
-		UserID: user.ID,
-	})
+		_, err := s.query.GetTeamLead(c, sqlc.GetTeamLeadParams{
+			TeamID: teamID,
+			UserID: user.ID,
+		})
 
-	if err != nil {
-		return false
-	}
+		if err != nil {
+			return false
+		}
+	*/
 
 	return true
 

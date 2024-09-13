@@ -10,7 +10,6 @@ SELECT
 	u.university,
 	u.department,
 	u.date_of_birth,
-	u.active,
 	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -41,7 +40,6 @@ SELECT
 	u.university,
 	u.department,
 	u.date_of_birth,
-	u.active,
 	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -72,7 +70,6 @@ SELECT
 		u.university,
 		u.department,
 		u.date_of_birth,
-		u.active,
 		COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 		COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -106,7 +103,6 @@ INSERT INTO users (
     university,
     department,
     date_of_birth,
-    active,
     created_at,
     updated_at
 ) VALUES (
@@ -119,7 +115,6 @@ INSERT INTO users (
     $7,
     $8,
     $9,
-    $10,
     NOW(),
     NOW()
 ) RETURNING *;
@@ -135,7 +130,6 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
-    active = $11,
     updated_at = NOW()
 WHERE
     id = $1
@@ -159,7 +153,6 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
-    active = $11,
     created_at = NOW(),
     updated_at = NOW(),
     deleted_at = NULL

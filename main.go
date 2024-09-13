@@ -28,5 +28,6 @@ func main() {
 	}
 
 	server := api.NewServer(sqlc.New(db), config.Secret)
+
 	server.Start(config.ServerAddress)
 }
