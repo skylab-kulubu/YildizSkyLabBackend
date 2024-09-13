@@ -11,12 +11,23 @@ import (
 )
 
 func (s *Server) RequireAuth(c *gin.Context) {
-	tokenString, err := c.Cookie("Auth")
+	/*
+		tokenString, err := c.Cookie("Auth")
 
-	if err != nil {
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+	*/
+
+	authHeader := c.GetHeader("Authorization")
+
+	if authHeader == "" || len(authHeader) < 7 || authHeader[:7] != "Bearer " {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
+
+	tokenString := authHeader[7:]
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
