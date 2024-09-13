@@ -55,27 +55,7 @@ func (q *Queries) DeleteTeam(ctx context.Context, id int32) error {
 }
 
 const getAllTeams = `-- name: GetAllTeams :many
-SELECT
-    t.id AS team_id,
-    t.name,
-    t.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS lead_names,
-    COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-    teams t
-LEFT JOIN
-    team_users tu ON t.id = tu.team_id AND tu.role = 'lead'
-LEFT JOIN
-    users u ON tu.user_id = u.id
-LEFT JOIN
-    team_projects tp ON t.id = tp.team_id
-LEFT JOIN
-    projects p ON tp.project_id = p.id
-WHERE
-    t.deleted_at IS NULL
-GROUP BY
-    t.id, t.name
-LIMIT $1 OFFSET $2
+SELECT id, name, description, created_at, updated_at, deleted_at FROM teams WHERE deleted_at IS NULL LIMIT $1 OFFSET $2
 `
 
 type GetAllTeamsParams struct {
@@ -83,29 +63,22 @@ type GetAllTeamsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllTeamsRow struct {
-	TeamID       int32       `json:"team_id"`
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	LeadNames    interface{} `json:"lead_names"`
-	ProjectNames interface{} `json:"project_names"`
-}
-
-func (q *Queries) GetAllTeams(ctx context.Context, arg GetAllTeamsParams) ([]GetAllTeamsRow, error) {
+func (q *Queries) GetAllTeams(ctx context.Context, arg GetAllTeamsParams) ([]Team, error) {
 	rows, err := q.db.QueryContext(ctx, getAllTeams, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetAllTeamsRow{}
+	items := []Team{}
 	for rows.Next() {
-		var i GetAllTeamsRow
+		var i Team
 		if err := rows.Scan(
-			&i.TeamID,
+			&i.ID,
 			&i.Name,
 			&i.Description,
-			&i.LeadNames,
-			&i.ProjectNames,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -121,45 +94,19 @@ func (q *Queries) GetAllTeams(ctx context.Context, arg GetAllTeamsParams) ([]Get
 }
 
 const getTeam = `-- name: GetTeam :one
-SELECT
-    t.id AS team_id,
-    t.name,
-    t.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS lead_names,
-    COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-    teams t
-LEFT JOIN
-    team_users tu ON t.id = tu.team_id AND tu.role = 'lead'
-LEFT JOIN
-    users u ON tu.user_id = u.id
-LEFT JOIN
-    team_projects tp ON t.id = tp.team_id
-LEFT JOIN
-    projects p ON tp.project_id = p.id
-WHERE
-    t.deleted_at IS NULL AND t.id = $1
-GROUP BY
-    t.id, t.name
+SELECT id, name, description, created_at, updated_at, deleted_at FROM teams WHERE id = $1 AND deleted_at IS NULL
 `
 
-type GetTeamRow struct {
-	TeamID       int32       `json:"team_id"`
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	LeadNames    interface{} `json:"lead_names"`
-	ProjectNames interface{} `json:"project_names"`
-}
-
-func (q *Queries) GetTeam(ctx context.Context, id int32) (GetTeamRow, error) {
+func (q *Queries) GetTeam(ctx context.Context, id int32) (Team, error) {
 	row := q.db.QueryRowContext(ctx, getTeam, id)
-	var i GetTeamRow
+	var i Team
 	err := row.Scan(
-		&i.TeamID,
+		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.LeadNames,
-		&i.ProjectNames,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

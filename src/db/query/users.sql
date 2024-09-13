@@ -28,6 +28,9 @@ GROUP BY
 	u.id, u.email
 LIMIT $1 OFFSET $2;
 
+-- name: GetUserWithNoDetails :one
+Select * from users where id = $1 and deleted_at is null;
+
 -- name: GetUser :one
 SELECT
     u.id AS user_id,

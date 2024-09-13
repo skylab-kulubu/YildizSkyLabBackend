@@ -336,6 +336,31 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 	return i, err
 }
 
+const getUserWithNoDetails = `-- name: GetUserWithNoDetails :one
+Select id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at from users where id = $1 and deleted_at is null
+`
+
+func (q *Queries) GetUserWithNoDetails(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserWithNoDetails, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.LastName,
+		&i.Email,
+		&i.Password,
+		&i.TelephoneNumber,
+		&i.University,
+		&i.Department,
+		&i.DateOfBirth,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const overwriteUser = `-- name: OverwriteUser :one
 UPDATE users SET
     name = $2,

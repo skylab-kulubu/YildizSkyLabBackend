@@ -12,3 +12,6 @@ UPDATE team_users SET deleted_at = NOW() WHERE user_id = $1;
 
 -- name: GetTeamMember :one
 SELECT * FROM team_users WHERE team_id = $1 AND user_id = $2 AND deleted_at IS NULL;
+
+-- name: GetTeamLeadByTeamId :many
+SELECT user_id FROM team_users WHERE team_id = $1 AND role = 'lead' AND  deleted_at IS NULL;

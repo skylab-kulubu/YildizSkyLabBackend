@@ -1,47 +1,8 @@
 -- name: GetAllProjects :many
-SELECT
-    p.id AS project_id,
-    p.name,
-    p.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS user_names,
-    COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names
-FROM
-    projects p
-LEFT JOIN
-    project_users up on p.id = up.project_id
-LEFT JOIN
-    users u on up.user_id = u.id
-LEFT JOIN
-    team_projects tp on p.id = tp.project_id
-LEFT JOIN
-    teams t on tp.team_id = t.id
-WHERE
-    p.deleted_at IS NULL
-GROUP BY
-    p.id, p.name
-LIMIT $1 OFFSET $2;
+SELECT * FROM projects WHERE deleted_at IS NULL LIMIT $1 OFFSET $2;
 
 -- name: GetProject :one
-SELECT
-    p.id AS project_id,
-    p.name,
-    p.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS user_names,
-    COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names
-FROM
-    projects p
-LEFT JOIN
-    project_users up on p.id = up.project_id
-LEFT JOIN
-    users u on up.user_id = u.id
-LEFT JOIN
-    team_projects tp on p.id = tp.project_id
-LEFT JOIN
-    teams t on tp.team_id = t.id
-WHERE
-    p.deleted_at IS NULL AND p.id = $1
-GROUP BY
-    p.id, p.name;
+SELECT * FROM projects WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreateProject :one
 INSERT INTO projects (

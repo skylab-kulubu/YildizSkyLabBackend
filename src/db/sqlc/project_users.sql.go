@@ -66,6 +66,33 @@ func (q *Queries) DeleteProjectMemberByUserId(ctx context.Context, userID int32)
 	return err
 }
 
+const getProjectLeadByProjectId = `-- name: GetProjectLeadByProjectId :many
+SELECT user_id FROM project_users WHERE project_id = $1 AND role = 'lead' AND  deleted_at IS NULL
+`
+
+func (q *Queries) GetProjectLeadByProjectId(ctx context.Context, projectID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectLeadByProjectId, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var user_id int32
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProjectMember = `-- name: GetProjectMember :one
 SELECT id, project_id, user_id, role, created_at, updated_at, deleted_at FROM project_users WHERE user_id = $1 AND project_id = $2 AND deleted_at IS NULL
 `

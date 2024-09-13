@@ -66,6 +66,33 @@ func (q *Queries) DeleteTeamMemberByUserId(ctx context.Context, userID int32) er
 	return err
 }
 
+const getTeamLeadByTeamId = `-- name: GetTeamLeadByTeamId :many
+SELECT user_id FROM team_users WHERE team_id = $1 AND role = 'lead' AND  deleted_at IS NULL
+`
+
+func (q *Queries) GetTeamLeadByTeamId(ctx context.Context, teamID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamLeadByTeamId, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var user_id int32
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTeamMember = `-- name: GetTeamMember :one
 SELECT id, team_id, user_id, role, created_at, updated_at, deleted_at FROM team_users WHERE team_id = $1 AND user_id = $2 AND deleted_at IS NULL
 `

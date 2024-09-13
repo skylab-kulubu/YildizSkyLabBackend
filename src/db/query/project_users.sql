@@ -12,3 +12,6 @@ UPDATE project_users SET deleted_at = NOW() WHERE user_id= $1;
 
 -- name: GetProjectMember :one
 SELECT * FROM project_users WHERE user_id = $1 AND project_id = $2 AND deleted_at IS NULL;
+
+-- name: GetProjectLeadByProjectId :many
+SELECT user_id FROM project_users WHERE project_id = $1 AND role = 'lead' AND  deleted_at IS NULL;

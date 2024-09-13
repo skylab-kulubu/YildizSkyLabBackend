@@ -53,6 +53,14 @@ type getTeamRequest struct {
 	ID int32 `uri:"id" binding:"required,min=1"`
 }
 
+type getTeamResponse struct {
+	Id          int32                `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	TeamLeads   []returnUserResponse `json:"team_leads"`
+	Projects    []sqlc.Project       `json:"projects"`
+}
+
 func (s *Server) getTeam(c *gin.Context) {
 	var req getTeamRequest
 
@@ -81,7 +89,67 @@ func (s *Server) getTeam(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkIfUserIsTeamLead(c, team.TeamID); !ok {
+	leadIds, err := s.query.GetTeamLeadByTeamId(c, team.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var leads []returnUserResponse
+
+	for _, leadId := range leadIds {
+		lead, err := s.query.GetUserWithNoDetails(c, leadId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+
+		leadToReturn := returnUserResponse{
+			Id:              lead.ID,
+			Name:            lead.Name,
+			LastName:        lead.LastName,
+			Email:           lead.Email,
+			TelephoneNumber: lead.TelephoneNumber,
+			University:      lead.University,
+			Department:      lead.Department,
+			Role:            lead.Role,
+			DateOfBirth:     lead.DateOfBirth,
+		}
+
+		leads = append(leads, leadToReturn)
+	}
+
+	projectIds, err := s.query.GetTeamProjectByTeamId(c, team.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var projects []sqlc.Project
+
+	for _, projectId := range projectIds {
+		project, err := s.query.GetProject(c, projectId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+		}
+		projects = append(projects, project)
+	}
+
+	if ok := s.checkIfUserIsTeamLead(c, team.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to see this team",
@@ -92,7 +160,13 @@ func (s *Server) getTeam(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Team got successfully",
-		Data:      team,
+		Data: getTeamResponse{
+			Id:          team.ID,
+			Name:        team.Name,
+			Description: team.Description,
+			TeamLeads:   leads,
+			Projects:    projects,
+		},
 	})
 }
 
@@ -115,12 +189,10 @@ func (s *Server) getAllTeams(c *gin.Context) {
 		return
 	}
 
-	arg := sqlc.GetAllTeamsParams{
+	teams, err := s.query.GetAllTeams(c, sqlc.GetAllTeamsParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
-	}
-
-	teams, err := s.query.GetAllTeams(c, arg)
+	})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{

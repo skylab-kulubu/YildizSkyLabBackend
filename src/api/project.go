@@ -54,6 +54,14 @@ type getProjectRequest struct {
 	ID int32 `uri:"id" binding:"required,min=1"`
 }
 
+type getProjectResponse struct {
+	Id          int32                `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	ProjectLead []returnUserResponse `json:"project_lead"`
+	Teams       []sqlc.Team          `json:"teams"`
+}
+
 func (s *Server) getProject(c *gin.Context) {
 	var req getProjectRequest
 
@@ -82,7 +90,68 @@ func (s *Server) getProject(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkIfUserIsProjectLead(c, project.ProjectID); !ok {
+	leadsIds, err := s.query.GetProjectLeadByProjectId(c, project.ID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var leads []returnUserResponse
+
+	for _, leadId := range leadsIds {
+		lead, err := s.query.GetUserWithNoDetails(c, leadId)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+
+		leadToReturn := returnUserResponse{
+			Id:              lead.ID,
+			Name:            lead.Name,
+			LastName:        lead.LastName,
+			Email:           lead.Email,
+			TelephoneNumber: lead.TelephoneNumber,
+			University:      lead.University,
+			Department:      lead.Department,
+			Role:            lead.Role,
+			DateOfBirth:     lead.DateOfBirth,
+		}
+
+		leads = append(leads, leadToReturn)
+	}
+
+	teamIds, err := s.query.GetProjectTeamByProjectId(c, project.ID)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var teams []sqlc.Team
+
+	for _, teamId := range teamIds {
+		team, err := s.query.GetTeam(c, teamId)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+		teams = append(teams, team)
+	}
+
+	if ok := s.checkIfUserIsProjectLead(c, project.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to see this team",
@@ -93,7 +162,13 @@ func (s *Server) getProject(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Project got successfully",
-		Data:      project,
+		Data: getProjectResponse{
+			Id:          project.ID,
+			Name:        project.Name,
+			Description: project.Description,
+			ProjectLead: leads,
+			Teams:       teams,
+		},
 	})
 }
 
@@ -116,12 +191,10 @@ func (s *Server) getAllProjects(c *gin.Context) {
 		return
 	}
 
-	arg := sqlc.GetAllProjectsParams{
+	projects, err := s.query.GetAllProjects(c, sqlc.GetAllProjectsParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
-	}
-
-	projects, err := s.query.GetAllProjects(c, arg)
+	})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
@@ -283,7 +356,7 @@ func (s *Server) addProjectMember(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkIfUserIsProjectLead(c, project.ProjectID); !ok {
+	if ok := s.checkIfUserIsProjectLead(c, project.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to see this team",
