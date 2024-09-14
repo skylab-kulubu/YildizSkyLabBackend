@@ -102,6 +102,7 @@ func (s *Server) signup(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User created successfully",
 		Data: returnUserResponse{
+			Id:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
