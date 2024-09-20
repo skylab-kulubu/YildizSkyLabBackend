@@ -15,3 +15,6 @@ SELECT * FROM project_users WHERE user_id = $1 AND project_id = $2 AND deleted_a
 
 -- name: GetProjectLeadByProjectId :many
 SELECT user_id FROM project_users WHERE project_id = $1 AND role = 'lead' AND  deleted_at IS NULL;
+
+-- name: GetProjectsByUserId :many
+SELECT project_id FROM project_users where user_id = $1 AND deleted_at is NULL;

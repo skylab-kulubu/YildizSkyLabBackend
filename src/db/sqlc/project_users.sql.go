@@ -116,3 +116,30 @@ func (q *Queries) GetProjectMember(ctx context.Context, arg GetProjectMemberPara
 	)
 	return i, err
 }
+
+const getProjectsByUserId = `-- name: GetProjectsByUserId :many
+SELECT project_id FROM project_users where user_id = $1 AND deleted_at is NULL
+`
+
+func (q *Queries) GetProjectsByUserId(ctx context.Context, userID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectsByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var project_id int32
+		if err := rows.Scan(&project_id); err != nil {
+			return nil, err
+		}
+		items = append(items, project_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

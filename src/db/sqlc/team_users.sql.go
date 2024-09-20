@@ -116,3 +116,30 @@ func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (T
 	)
 	return i, err
 }
+
+const getTeamsByUserId = `-- name: GetTeamsByUserId :many
+SELECT team_id FROM team_users where user_id = $1 and deleted_at is null
+`
+
+func (q *Queries) GetTeamsByUserId(ctx context.Context, userID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamsByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var team_id int32
+		if err := rows.Scan(&team_id); err != nil {
+			return nil, err
+		}
+		items = append(items, team_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

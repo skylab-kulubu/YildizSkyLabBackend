@@ -120,34 +120,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
 }
 
 const getAllUsers = `-- name: GetAllUsers :many
-SELECT
-    u.id AS user_id,
-	u.name,
-	u.last_name,
-	u.email,
-	u.password,
-	u.telephone_number,
-	u.role,
-	u.university,
-	u.department,
-	u.date_of_birth,
-	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
-	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-	users u
-LEFT JOIN
-	team_users ut on u.id =ut.user_id
-LEFT JOIN
-	teams t on ut.team_id = t.id
-LEFT JOIN
-    project_users up on u.id = up.user_id
-LEFT JOIN
-    projects p on up.project_id = p.id
-WHERE
-    u.deleted_at IS NULL
-GROUP BY
-	u.id, u.email
-LIMIT $1 OFFSET $2
+Select id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at from users where deleted_at is null LIMIT $1 OFFSET $2
 `
 
 type GetAllUsersParams struct {
@@ -155,43 +128,29 @@ type GetAllUsersParams struct {
 	Offset int32 `json:"offset"`
 }
 
-type GetAllUsersRow struct {
-	UserID          int32       `json:"user_id"`
-	Name            string      `json:"name"`
-	LastName        string      `json:"last_name"`
-	Email           string      `json:"email"`
-	Password        string      `json:"password"`
-	TelephoneNumber string      `json:"telephone_number"`
-	Role            string      `json:"role"`
-	University      string      `json:"university"`
-	Department      string      `json:"department"`
-	DateOfBirth     time.Time   `json:"date_of_birth"`
-	TeamNames       interface{} `json:"team_names"`
-	ProjectNames    interface{} `json:"project_names"`
-}
-
-func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]GetAllUsersRow, error) {
+func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, getAllUsers, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []GetAllUsersRow{}
+	items := []User{}
 	for rows.Next() {
-		var i GetAllUsersRow
+		var i User
 		if err := rows.Scan(
-			&i.UserID,
+			&i.ID,
 			&i.Name,
 			&i.LastName,
 			&i.Email,
 			&i.Password,
 			&i.TelephoneNumber,
-			&i.Role,
 			&i.University,
 			&i.Department,
 			&i.DateOfBirth,
-			&i.TeamNames,
-			&i.ProjectNames,
+			&i.Role,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -207,66 +166,26 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Get
 }
 
 const getUser = `-- name: GetUser :one
-SELECT
-    u.id AS user_id,
-	u.name,
-	u.last_name,
-	u.email,
-	u.password,
-	u.telephone_number,
-	u.role,
-	u.university,
-	u.department,
-	u.date_of_birth,
-	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
-	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-	users u
-LEFT JOIN
-	team_users ut on u.id =ut.user_id
-LEFT JOIN
-	teams t on ut.team_id = t.id
-LEFT JOIN
-    project_users up on u.id = up.user_id
-LEFT JOIN
-    projects p on up.project_id = p.id
-WHERE
-    u.id = $1 AND u.deleted_at IS NULL
-GROUP BY
-	u.id, u.email
+SELECT id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at from users where id  = $1 and deleted_at is null
 `
 
-type GetUserRow struct {
-	UserID          int32       `json:"user_id"`
-	Name            string      `json:"name"`
-	LastName        string      `json:"last_name"`
-	Email           string      `json:"email"`
-	Password        string      `json:"password"`
-	TelephoneNumber string      `json:"telephone_number"`
-	Role            string      `json:"role"`
-	University      string      `json:"university"`
-	Department      string      `json:"department"`
-	DateOfBirth     time.Time   `json:"date_of_birth"`
-	TeamNames       interface{} `json:"team_names"`
-	ProjectNames    interface{} `json:"project_names"`
-}
-
-func (q *Queries) GetUser(ctx context.Context, id int32) (GetUserRow, error) {
+func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i GetUserRow
+	var i User
 	err := row.Scan(
-		&i.UserID,
+		&i.ID,
 		&i.Name,
 		&i.LastName,
 		&i.Email,
 		&i.Password,
 		&i.TelephoneNumber,
-		&i.Role,
 		&i.University,
 		&i.Department,
 		&i.DateOfBirth,
-		&i.TeamNames,
-		&i.ProjectNames,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

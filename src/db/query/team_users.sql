@@ -15,3 +15,6 @@ SELECT * FROM team_users WHERE team_id = $1 AND user_id = $2 AND deleted_at IS N
 
 -- name: GetTeamLeadByTeamId :many
 SELECT user_id FROM team_users WHERE team_id = $1 AND role = 'lead' AND  deleted_at IS NULL;
+
+-- name: GetTeamsByUserId :many
+SELECT team_id FROM team_users where user_id = $1 and deleted_at is null;
