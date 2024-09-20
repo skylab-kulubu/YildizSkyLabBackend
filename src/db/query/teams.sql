@@ -1,47 +1,8 @@
 -- name: GetAllTeams :many
-SELECT
-    t.id AS team_id,
-    t.name,
-    t.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS lead_names,
-    COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-    teams t
-LEFT JOIN
-    team_leads tl on t.id = tl.team_id
-LEFT JOIN
-    users u on tl.user_id = u.id
-LEFT JOIN
-    team_projects tp on t.id = tp.team_id
-LEFT JOIN
-    projects p on tp.project_id = p.id
-WHERE
-    t.deleted_at IS NULL
-GROUP BY
-    t.id, t.name
-LIMIT $1 OFFSET $2;
+SELECT * FROM teams WHERE deleted_at IS NULL LIMIT $1 OFFSET $2;
 
 -- name: GetTeam :one
-SELECT
-    t.id AS team_id,
-    t.name,
-    t.description,
-    COALESCE(STRING_AGG(DISTINCT u.name, ',')) AS lead_names,
-    COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-    teams t
-LEFT JOIN
-    team_leads tl on t.id = tl.team_id
-LEFT JOIN
-    users u on tl.user_id = u.id
-LEFT JOIN
-    team_projects tp on t.id = tp.team_id
-LEFT JOIN
-    projects p on tp.project_id = p.id
-WHERE
-    t.deleted_at IS NULL AND t.id = $1
-GROUP BY
-    t.id, t.name;
+SELECT * FROM teams WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: CreateTeam :one
 INSERT INTO teams (
@@ -55,7 +16,6 @@ INSERT INTO teams (
     NOW(),
     NOW()
 ) RETURNING *;
-
 
 -- name: UpdateTeam :one
 UPDATE teams set

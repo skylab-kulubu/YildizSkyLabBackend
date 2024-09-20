@@ -45,3 +45,57 @@ func (q *Queries) DeleteTeamProject(ctx context.Context, arg DeleteTeamProjectPa
 	_, err := q.db.ExecContext(ctx, deleteTeamProject, arg.TeamID, arg.ProjectID)
 	return err
 }
+
+const getProjectTeamByProjectId = `-- name: GetProjectTeamByProjectId :many
+SELECT team_id FROM team_projects WHERE project_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetProjectTeamByProjectId(ctx context.Context, projectID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectTeamByProjectId, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var team_id int32
+		if err := rows.Scan(&team_id); err != nil {
+			return nil, err
+		}
+		items = append(items, team_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTeamProjectByTeamId = `-- name: GetTeamProjectByTeamId :many
+SELECT project_id FROM team_projects WHERE team_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetTeamProjectByTeamId(ctx context.Context, teamID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamProjectByTeamId, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var project_id int32
+		if err := rows.Scan(&project_id); err != nil {
+			return nil, err
+		}
+		items = append(items, project_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

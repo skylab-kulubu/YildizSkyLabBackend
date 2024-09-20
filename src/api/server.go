@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 	"yildizskylab/src/db/sqlc"
 
@@ -43,10 +44,8 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.POST("/teams", server.RequireAuth, server.RequireRole([]string{admin}, server.createTeam))
 	router.GET("/teams/:id", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.getTeam))
 	router.GET("/teams", server.RequireAuth, server.getAllTeams)
-	router.PUT("/teams/", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.updateTeam))
+	router.PUT("/teams/:id", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.updateTeam))
 	router.DELETE("/teams/:id", server.RequireAuth, server.RequireRole([]string{admin}, server.deleteTeam))
-	router.POST("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.addTeamLead))
-	router.DELETE("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.removeTeamLead))
 	router.POST("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamProject))
 	router.DELETE("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.removeTeamProject))
 	router.POST("/teams/member", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamMember))
@@ -64,10 +63,8 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.POST("/projects", server.RequireAuth, server.createProject)
 	router.GET("/projects/:id", server.RequireAuth, server.getProject)
 	router.GET("/projects", server.RequireAuth, server.getAllProjects)
-	router.PUT("/projects/", server.RequireAuth, server.updateProject)
+	router.PUT("/projects/:id", server.RequireAuth, server.updateProject)
 	router.DELETE("/projects/:id", server.RequireAuth, server.deleteProject)
-	router.POST("/projects/lead", server.RequireAuth, server.addProjectLead)
-	router.DELETE("/projects/lead", server.RequireAuth, server.removeProjectLead)
 	router.POST("/projects/member", server.RequireAuth, server.addProjectMember)
 	router.DELETE("/projects/member", server.RequireAuth, server.removeProjectMember)
 
@@ -77,6 +74,19 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 }
 
 func (s *Server) Start(address string) error {
+
+	s.query.CreateUser(context.Background(), sqlc.CreateUserParams{
+		Name:            "admin",
+		LastName:        "admin",
+		Email:           "admin@admin.com",
+		Password:        "$2a$10$3QYYykR1IWPX.KG9ne2mN..A/jZjynJd4qK.o0lRDxR/KAxBQTCXi",
+		TelephoneNumber: "123123123",
+		Role:            "admin",
+		University:      "ytu",
+		Department:      "mtm",
+		DateOfBirth:     time.Now(),
+	})
+
 	return s.router.Run(address)
 }
 

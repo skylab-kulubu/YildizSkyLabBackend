@@ -28,19 +28,11 @@ type Project struct {
 	DeletedAt   sql.NullTime `json:"deleted_at"`
 }
 
-type ProjectLead struct {
-	ID        int32        `json:"id"`
-	ProjectID int32        `json:"project_id"`
-	UserID    int32        `json:"user_id"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	DeletedAt sql.NullTime `json:"deleted_at"`
-}
-
 type ProjectUser struct {
 	ID        int32        `json:"id"`
 	ProjectID int32        `json:"project_id"`
 	UserID    int32        `json:"user_id"`
+	Role      string       `json:"role"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
@@ -53,15 +45,6 @@ type Team struct {
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
 	DeletedAt   sql.NullTime `json:"deleted_at"`
-}
-
-type TeamLead struct {
-	ID        int32        `json:"id"`
-	TeamID    int32        `json:"team_id"`
-	UserID    int32        `json:"user_id"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
-	DeletedAt sql.NullTime `json:"deleted_at"`
 }
 
 type TeamProject struct {
@@ -77,6 +60,7 @@ type TeamUser struct {
 	ID        int32        `json:"id"`
 	TeamID    int32        `json:"team_id"`
 	UserID    int32        `json:"user_id"`
+	Role      string       `json:"role"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
@@ -93,7 +77,6 @@ type User struct {
 	Department      string       `json:"department"`
 	DateOfBirth     time.Time    `json:"date_of_birth"`
 	Role            string       `json:"role"`
-	Active          bool         `json:"active"`
 	CreatedAt       time.Time    `json:"created_at"`
 	UpdatedAt       time.Time    `json:"updated_at"`
 	DeletedAt       sql.NullTime `json:"deleted_at"`

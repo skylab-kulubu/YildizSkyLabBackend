@@ -39,8 +39,6 @@ type signupRequest struct {
 	University      string    `json:"university"`
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
-	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) signup(c *gin.Context) {
@@ -85,8 +83,7 @@ func (s *Server) signup(c *gin.Context) {
 			University:      req.University,
 			Department:      req.Department,
 			DateOfBirth:     req.DateOfBirth,
-			Role:            req.Role,
-			Active:          req.Active,
+			Role:            "member",
 		})
 
 	case deleted:
@@ -105,6 +102,7 @@ func (s *Server) signup(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User created successfully",
 		Data: returnUserResponse{
+			Id:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -180,26 +178,6 @@ func (s *Server) login(c *gin.Context) {
 		})
 		return
 	}
-	/*
-
-		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("Auth", tokenString, 3600*24, "", "", false, true)
-
-
-			c.JSON(http.StatusOK, Response{
-				IsSuccess: true,
-				Message:   "User logged in successfully",
-				Data: returnUserResponse{
-					Name:            user.Name,
-					LastName:        user.LastName,
-					Email:           user.Email,
-					TelephoneNumber: user.TelephoneNumber,
-					University:      user.University,
-					Department:      user.Department,
-					DateOfBirth:     user.DateOfBirth,
-					Role:            user.Role,
-				},
-			})*/
 
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
@@ -213,6 +191,20 @@ func (s *Server) login(c *gin.Context) {
 // GET USER
 type getUserRequest struct {
 	ID int32 `uri:"id" binding:"required"`
+}
+
+type getUserResponseWithDetails struct {
+	Id              int32          `json:"id"`
+	Name            string         `json:"name"`
+	LastName        string         `json:"last_name"`
+	Email           string         `json:"email"`
+	TelephoneNumber string         `json:"telephone_number"`
+	University      string         `json:"university"`
+	Department      string         `json:"department"`
+	DateOfBirth     time.Time      `json:"date_of_birth"`
+	Role            string         `json:"role"`
+	Teams           []sqlc.Team    `json:"teams"`
+	Projects        []sqlc.Project `json:"projects"`
 }
 
 func (s *Server) getUser(c *gin.Context) {
@@ -251,11 +243,63 @@ func (s *Server) getUser(c *gin.Context) {
 		return
 	}
 
+	teamIds, err := s.query.GetTeamsByUserId(c, user.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var teams []sqlc.Team
+
+	for _, teamId := range teamIds {
+		team, err := s.query.GetTeam(c, teamId)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+
+		teams = append(teams, team)
+	}
+
+	projectIds, err := s.query.GetProjectsByUserId(c, user.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var projects []sqlc.Project
+
+	for _, projectId := range projectIds {
+		project, err := s.query.GetProject(c, projectId)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+
+		projects = append(projects, project)
+	}
+
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "User got successfully",
-		Data: returnUserResponse{
-			Id:              user.UserID,
+		Data: getUserResponseWithDetails{
+			Id:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -264,6 +308,8 @@ func (s *Server) getUser(c *gin.Context) {
 			Department:      user.Department,
 			DateOfBirth:     user.DateOfBirth,
 			Role:            user.Role,
+			Teams:           teams,
+			Projects:        projects,
 		},
 	})
 }
@@ -304,7 +350,7 @@ func (s *Server) getAllUsers(c *gin.Context) {
 
 	for i, user := range users {
 		returnUsers[i] = returnUserResponse{
-			Id:              user.UserID,
+			Id:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -337,7 +383,6 @@ type updateUserRequest struct {
 	Department      string    `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
 	Role            string    `json:"role"`
-	Active          bool      `json:"active"`
 }
 
 func (s *Server) updateUser(c *gin.Context) {
@@ -370,7 +415,6 @@ func (s *Server) updateUser(c *gin.Context) {
 		Department:      req.Department,
 		DateOfBirth:     req.DateOfBirth,
 		Role:            req.Role,
-		Active:          req.Active,
 	})
 
 	if err != nil {
@@ -490,8 +534,7 @@ func (s *Server) overwriteUser(c *gin.Context, user sqlc.User) (sqlc.User, error
 		University:      user.University,
 		Department:      user.Department,
 		DateOfBirth:     user.DateOfBirth,
-		Role:            user.Role,
-		Active:          user.Active,
+		Role:            "member",
 	}
 
 	return s.query.OverwriteUser(c, arg)
@@ -505,6 +548,10 @@ func (s *Server) checkUserPermission(c *gin.Context, userId int32) bool {
 	}
 
 	user := anyUser.(sqlc.User)
+
+	if user.Role == "admin" {
+		return true
+	}
 
 	if user.ID == userId {
 		return true

@@ -10,21 +10,23 @@ import (
 )
 
 const createProjectMember = `-- name: CreateProjectMember :one
-INSERT INTO project_users(user_id, project_id,created_at,updated_at) values ($1,$2,NOW(),NOW()) RETURNING id, project_id, user_id, created_at, updated_at, deleted_at
+INSERT INTO project_users(user_id, project_id,role,created_at,updated_at) values ($1,$2,$3,NOW(),NOW()) RETURNING id, project_id, user_id, role, created_at, updated_at, deleted_at
 `
 
 type CreateProjectMemberParams struct {
-	UserID    int32 `json:"user_id"`
-	ProjectID int32 `json:"project_id"`
+	UserID    int32  `json:"user_id"`
+	ProjectID int32  `json:"project_id"`
+	Role      string `json:"role"`
 }
 
 func (q *Queries) CreateProjectMember(ctx context.Context, arg CreateProjectMemberParams) (ProjectUser, error) {
-	row := q.db.QueryRowContext(ctx, createProjectMember, arg.UserID, arg.ProjectID)
+	row := q.db.QueryRowContext(ctx, createProjectMember, arg.UserID, arg.ProjectID, arg.Role)
 	var i ProjectUser
 	err := row.Scan(
 		&i.ID,
 		&i.ProjectID,
 		&i.UserID,
+		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -62,4 +64,82 @@ UPDATE project_users SET deleted_at = NOW() WHERE user_id= $1
 func (q *Queries) DeleteProjectMemberByUserId(ctx context.Context, userID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteProjectMemberByUserId, userID)
 	return err
+}
+
+const getProjectLeadByProjectId = `-- name: GetProjectLeadByProjectId :many
+SELECT user_id FROM project_users WHERE project_id = $1 AND role = 'lead' AND  deleted_at IS NULL
+`
+
+func (q *Queries) GetProjectLeadByProjectId(ctx context.Context, projectID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectLeadByProjectId, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var user_id int32
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProjectMember = `-- name: GetProjectMember :one
+SELECT id, project_id, user_id, role, created_at, updated_at, deleted_at FROM project_users WHERE user_id = $1 AND project_id = $2 AND deleted_at IS NULL
+`
+
+type GetProjectMemberParams struct {
+	UserID    int32 `json:"user_id"`
+	ProjectID int32 `json:"project_id"`
+}
+
+func (q *Queries) GetProjectMember(ctx context.Context, arg GetProjectMemberParams) (ProjectUser, error) {
+	row := q.db.QueryRowContext(ctx, getProjectMember, arg.UserID, arg.ProjectID)
+	var i ProjectUser
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getProjectsByUserId = `-- name: GetProjectsByUserId :many
+SELECT project_id FROM project_users where user_id = $1 AND deleted_at is NULL
+`
+
+func (q *Queries) GetProjectsByUserId(ctx context.Context, userID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectsByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var project_id int32
+		if err := rows.Scan(&project_id); err != nil {
+			return nil, err
+		}
+		items = append(items, project_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

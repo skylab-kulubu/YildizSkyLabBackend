@@ -53,7 +53,7 @@ func (s *Server) RequireAuth(c *gin.Context) {
 		userRow, err := s.query.GetUser(c, intID)
 
 		user := sqlc.User{
-			ID:              userRow.UserID,
+			ID:              userRow.ID,
 			Name:            userRow.Name,
 			LastName:        userRow.LastName,
 			Email:           userRow.Email,
@@ -63,7 +63,6 @@ func (s *Server) RequireAuth(c *gin.Context) {
 			Department:      userRow.Department,
 			DateOfBirth:     userRow.DateOfBirth,
 			Role:            userRow.Role,
-			Active:          userRow.Active,
 		}
 
 		if err != nil {

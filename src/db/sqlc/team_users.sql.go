@@ -10,21 +10,23 @@ import (
 )
 
 const createTeamMember = `-- name: CreateTeamMember :one
-INSERT INTO team_users (team_id,user_id,created_at,updated_at) values ($1,$2,NOW(),NOW()) RETURNING id, team_id, user_id, created_at, updated_at, deleted_at
+INSERT INTO team_users (team_id,user_id,role,created_at,updated_at) values ($1,$2,$3,NOW(),NOW()) RETURNING id, team_id, user_id, role, created_at, updated_at, deleted_at
 `
 
 type CreateTeamMemberParams struct {
-	TeamID int32 `json:"team_id"`
-	UserID int32 `json:"user_id"`
+	TeamID int32  `json:"team_id"`
+	UserID int32  `json:"user_id"`
+	Role   string `json:"role"`
 }
 
 func (q *Queries) CreateTeamMember(ctx context.Context, arg CreateTeamMemberParams) (TeamUser, error) {
-	row := q.db.QueryRowContext(ctx, createTeamMember, arg.TeamID, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createTeamMember, arg.TeamID, arg.UserID, arg.Role)
 	var i TeamUser
 	err := row.Scan(
 		&i.ID,
 		&i.TeamID,
 		&i.UserID,
+		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -62,4 +64,82 @@ UPDATE team_users SET deleted_at = NOW() WHERE user_id = $1
 func (q *Queries) DeleteTeamMemberByUserId(ctx context.Context, userID int32) error {
 	_, err := q.db.ExecContext(ctx, deleteTeamMemberByUserId, userID)
 	return err
+}
+
+const getTeamLeadByTeamId = `-- name: GetTeamLeadByTeamId :many
+SELECT user_id FROM team_users WHERE team_id = $1 AND role = 'lead' AND  deleted_at IS NULL
+`
+
+func (q *Queries) GetTeamLeadByTeamId(ctx context.Context, teamID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamLeadByTeamId, teamID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var user_id int32
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTeamMember = `-- name: GetTeamMember :one
+SELECT id, team_id, user_id, role, created_at, updated_at, deleted_at FROM team_users WHERE team_id = $1 AND user_id = $2 AND deleted_at IS NULL
+`
+
+type GetTeamMemberParams struct {
+	TeamID int32 `json:"team_id"`
+	UserID int32 `json:"user_id"`
+}
+
+func (q *Queries) GetTeamMember(ctx context.Context, arg GetTeamMemberParams) (TeamUser, error) {
+	row := q.db.QueryRowContext(ctx, getTeamMember, arg.TeamID, arg.UserID)
+	var i TeamUser
+	err := row.Scan(
+		&i.ID,
+		&i.TeamID,
+		&i.UserID,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getTeamsByUserId = `-- name: GetTeamsByUserId :many
+SELECT team_id FROM team_users where user_id = $1 and deleted_at is null
+`
+
+func (q *Queries) GetTeamsByUserId(ctx context.Context, userID int32) ([]int32, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamsByUserId, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int32{}
+	for rows.Next() {
+		var team_id int32
+		if err := rows.Scan(&team_id); err != nil {
+			return nil, err
+		}
+		items = append(items, team_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

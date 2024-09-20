@@ -1,63 +1,11 @@
 -- name: GetAllUsers :many
-SELECT
-    u.id AS user_id,
-	u.name,
-	u.last_name,
-	u.email,
-	u.password,
-	u.telephone_number,
-	u.role,
-	u.university,
-	u.department,
-	u.date_of_birth,
-	u.active,
-	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
-	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-	users u
-LEFT JOIN
-	team_users ut on u.id =ut.user_id
-LEFT JOIN
-	teams t on ut.team_id = t.id
-LEFT JOIN
-    project_users up on u.id = up.user_id
-LEFT JOIN
-    projects p on up.project_id = p.id
-WHERE
-    u.deleted_at IS NULL
-GROUP BY
-	u.id, u.email
-LIMIT $1 OFFSET $2;
+Select * from users where deleted_at is null LIMIT $1 OFFSET $2;
+
+-- name: GetUserWithNoDetails :one
+Select * from users where id = $1 and deleted_at is null;
 
 -- name: GetUser :one
-SELECT
-    u.id AS user_id,
-	u.name,
-	u.last_name,
-	u.email,
-	u.password,
-	u.telephone_number,
-	u.role,
-	u.university,
-	u.department,
-	u.date_of_birth,
-	u.active,
-	COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
-	COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-	users u
-LEFT JOIN
-	team_users ut on u.id =ut.user_id
-LEFT JOIN
-	teams t on ut.team_id = t.id
-LEFT JOIN
-    project_users up on u.id = up.user_id
-LEFT JOIN
-    projects p on up.project_id = p.id
-WHERE
-    u.id = $1 AND u.deleted_at IS NULL
-GROUP BY
-	u.id, u.email;
+SELECT * from users where id  = $1 and deleted_at is null;
 
 
 -- name: GetUserByEmail :one
@@ -72,7 +20,6 @@ SELECT
 		u.university,
 		u.department,
 		u.date_of_birth,
-		u.active,
 		COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
 		COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
 FROM
@@ -106,7 +53,6 @@ INSERT INTO users (
     university,
     department,
     date_of_birth,
-    active,
     created_at,
     updated_at
 ) VALUES (
@@ -119,7 +65,6 @@ INSERT INTO users (
     $7,
     $8,
     $9,
-    $10,
     NOW(),
     NOW()
 ) RETURNING *;
@@ -135,7 +80,6 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
-    active = $11,
     updated_at = NOW()
 WHERE
     id = $1
@@ -159,7 +103,6 @@ UPDATE users SET
     university = $8,
     department = $9,
     date_of_birth = $10,
-    active = $11,
     created_at = NOW(),
     updated_at = NOW(),
     deleted_at = NULL

@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"yildizskylab/src/db/sqlc"
 
 	"github.com/gin-gonic/gin"
@@ -52,6 +53,14 @@ type getTeamRequest struct {
 	ID int32 `uri:"id" binding:"required,min=1"`
 }
 
+type getTeamResponse struct {
+	Id          int32                `json:"id"`
+	Name        string               `json:"name"`
+	Description string               `json:"description"`
+	TeamLeads   []returnUserResponse `json:"team_leads"`
+	Projects    []sqlc.Project       `json:"projects"`
+}
+
 func (s *Server) getTeam(c *gin.Context) {
 	var req getTeamRequest
 
@@ -80,7 +89,67 @@ func (s *Server) getTeam(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkIfUserIsTeamLead(c, team.TeamID); !ok {
+	leadIds, err := s.query.GetTeamLeadByTeamId(c, team.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var leads []returnUserResponse
+
+	for _, leadId := range leadIds {
+		lead, err := s.query.GetUserWithNoDetails(c, leadId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+			return
+		}
+
+		leadToReturn := returnUserResponse{
+			Id:              lead.ID,
+			Name:            lead.Name,
+			LastName:        lead.LastName,
+			Email:           lead.Email,
+			TelephoneNumber: lead.TelephoneNumber,
+			University:      lead.University,
+			Department:      lead.Department,
+			Role:            lead.Role,
+			DateOfBirth:     lead.DateOfBirth,
+		}
+
+		leads = append(leads, leadToReturn)
+	}
+
+	projectIds, err := s.query.GetTeamProjectByTeamId(c, team.ID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	var projects []sqlc.Project
+
+	for _, projectId := range projectIds {
+		project, err := s.query.GetProject(c, projectId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, Response{
+				IsSuccess: false,
+				Message:   err.Error(),
+			})
+		}
+		projects = append(projects, project)
+	}
+
+	if ok := s.checkIfUserIsTeamLead(c, team.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to see this team",
@@ -91,7 +160,13 @@ func (s *Server) getTeam(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Team got successfully",
-		Data:      team,
+		Data: getTeamResponse{
+			Id:          team.ID,
+			Name:        team.Name,
+			Description: team.Description,
+			TeamLeads:   leads,
+			Projects:    projects,
+		},
 	})
 }
 
@@ -114,12 +189,10 @@ func (s *Server) getAllTeams(c *gin.Context) {
 		return
 	}
 
-	arg := sqlc.GetAllTeamsParams{
+	teams, err := s.query.GetAllTeams(c, sqlc.GetAllTeamsParams{
 		Limit:  req.PageSize,
 		Offset: (req.PageID - 1) * req.PageSize,
-	}
-
-	teams, err := s.query.GetAllTeams(c, arg)
+	})
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, Response{
@@ -140,12 +213,27 @@ func (s *Server) getAllTeams(c *gin.Context) {
 
 // UPDATE TEAM
 type updateTeamRequest struct {
-	ID          int32  `json:"id" binding:"required,min=1"`
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"required"`
 }
 
 func (s *Server) updateTeam(c *gin.Context) {
+
+	var id int32
+
+	idParam := c.Param("id")
+
+	i, err := strconv.Atoi(idParam)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	id = int32(i)
+
 	var req updateTeamRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -156,7 +244,7 @@ func (s *Server) updateTeam(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkIfUserIsTeamLead(c, req.ID); !ok {
+	if ok := s.checkIfUserIsTeamLead(c, id); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to update this team",
@@ -165,7 +253,7 @@ func (s *Server) updateTeam(c *gin.Context) {
 	}
 
 	updatedTeam, err := s.query.UpdateTeam(c, sqlc.UpdateTeamParams{
-		ID:          req.ID,
+		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,
 	})
@@ -225,105 +313,6 @@ func (s *Server) deleteTeam(c *gin.Context) {
 		Message:   "Team deleted successfully",
 	})
 }
-
-///////////////////////////////
-
-// ADD TEAM LEAD
-type addTeamLeadRequest struct {
-	TeamID int32 `json:"team_id" binding:"required,min=1"`
-	UserId int32 `json:"user_id" binding:"required,min=1"`
-}
-
-func (s *Server) addTeamLead(c *gin.Context) {
-	var req addTeamLeadRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	_, err := s.query.GetTeam(c, req.TeamID) // need a better solition but work for now
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   "Team not found",
-		})
-		return
-	}
-
-	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   "User not found",
-		})
-		return
-	}
-
-	teamLead, err := s.query.CreateTeamLead(c, sqlc.CreateTeamLeadParams{
-		TeamID: req.TeamID,
-		UserID: req.UserId,
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, Response{
-		IsSuccess: true,
-		Message:   "Team lead added successfully",
-		Data:      teamLead,
-	})
-}
-
-type removeTeamLeadRequest struct {
-	TeamID int32 `json:"team_id" binding:"required,min=1"`
-	UserId int32 `json:"user_id" binding:"required,min=1"`
-}
-
-///////////////////////////////
-
-// REMOVE TEAM LEAD
-func (s *Server) removeTeamLead(c *gin.Context) {
-	var req removeTeamLeadRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	err := s.query.DeleteTeamLead(c, sqlc.DeleteTeamLeadParams{
-		TeamID: req.TeamID,
-		UserID: req.UserId,
-	})
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, Response{
-		IsSuccess: true,
-		Message:   "Team lead removed successfully",
-	})
-}
-
-///////////////////////////////
 
 // ADD TEAM PROJECT
 type addTeamProjectRequest struct {
@@ -440,8 +429,9 @@ func (s *Server) removeTeamProject(c *gin.Context) {
 
 // ADD TEAM MEMBER
 type addTeamMemberRequest struct {
-	TeamID int32 `json:"team_id" binding:"required,min=1"`
-	UserId int32 `json:"user_id" binding:"required,min=1"`
+	TeamID int32  `json:"team_id" binding:"required,min=1"`
+	UserId int32  `json:"user_id" binding:"required,min=1"`
+	Role   string `json:"role" binding:"required"`
 }
 
 func (s *Server) addTeamMember(c *gin.Context) {
@@ -486,6 +476,7 @@ func (s *Server) addTeamMember(c *gin.Context) {
 	teamMember, err := s.query.CreateTeamMember(c, sqlc.CreateTeamMemberParams{
 		TeamID: req.TeamID,
 		UserID: req.UserId,
+		Role:   req.Role,
 	})
 
 	if err != nil {
@@ -566,7 +557,7 @@ func (s *Server) checkIfUserIsTeamLead(c *gin.Context, teamID int32) bool {
 		return true
 	}
 
-	_, err := s.query.GetTeamLead(c, sqlc.GetTeamLeadParams{
+	member, err := s.query.GetTeamMember(c, sqlc.GetTeamMemberParams{
 		TeamID: teamID,
 		UserID: user.ID,
 	})
@@ -575,6 +566,9 @@ func (s *Server) checkIfUserIsTeamLead(c *gin.Context, teamID int32) bool {
 		return false
 	}
 
-	return true
+	if member.Role == "lead" {
+		return true
+	}
 
+	return false
 }
