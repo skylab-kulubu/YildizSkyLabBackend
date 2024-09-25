@@ -216,3 +216,43 @@ func (s *Server) getAllNews(c *gin.Context) {
 		Data:      newsList,
 	})
 }
+
+type getNewsRequest struct {
+	ID int32 `uri:"id" binding:"required"`
+}
+
+func (s *Server) getNews(c *gin.Context) {
+
+	var req getNewsRequest
+
+	if err := c.ShouldBindUri(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	news, err := s.query.GetANewsWithDetails(c, req.ID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, Response{
+				IsSuccess: false,
+				Message:   "News not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "News got successfully",
+		Data:      news,
+	})
+}

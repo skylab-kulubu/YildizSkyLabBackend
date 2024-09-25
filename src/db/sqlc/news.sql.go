@@ -54,6 +54,64 @@ func (q *Queries) DeleteNews(ctx context.Context, id int32) error {
 	return err
 }
 
+const getANewsWithDetails = `-- name: GetANewsWithDetails :one
+SELECT 
+    n.id,
+    n.title,
+    n.publish_date,
+    n.description,
+    i.id as image_id,
+    i.url as image_url,
+    i.type as image_type,
+    u.id as user_id,
+    u.name as user_name,
+    u.last_name as user_last_name,
+    u.email as user_email,
+    u.university as user_university,
+    u.department as user_department
+FROM news n
+JOIN images i ON i.id = n.cover_image_id
+JOIN users u ON u.id = n.created_by_id
+WHERE n.id = $1
+`
+
+type GetANewsWithDetailsRow struct {
+	ID             int32     `json:"id"`
+	Title          string    `json:"title"`
+	PublishDate    time.Time `json:"publish_date"`
+	Description    string    `json:"description"`
+	ImageID        int32     `json:"image_id"`
+	ImageUrl       string    `json:"image_url"`
+	ImageType      string    `json:"image_type"`
+	UserID         int32     `json:"user_id"`
+	UserName       string    `json:"user_name"`
+	UserLastName   string    `json:"user_last_name"`
+	UserEmail      string    `json:"user_email"`
+	UserUniversity string    `json:"user_university"`
+	UserDepartment string    `json:"user_department"`
+}
+
+func (q *Queries) GetANewsWithDetails(ctx context.Context, id int32) (GetANewsWithDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getANewsWithDetails, id)
+	var i GetANewsWithDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.PublishDate,
+		&i.Description,
+		&i.ImageID,
+		&i.ImageUrl,
+		&i.ImageType,
+		&i.UserID,
+		&i.UserName,
+		&i.UserLastName,
+		&i.UserEmail,
+		&i.UserUniversity,
+		&i.UserDepartment,
+	)
+	return i, err
+}
+
 const getAllNews = `-- name: GetAllNews :many
 SELECT id, title, publish_date, description, cover_image_id, created_by_id
 FROM news
@@ -96,14 +154,14 @@ func (q *Queries) GetAllNews(ctx context.Context, arg GetAllNewsParams) ([]News,
 	return items, nil
 }
 
-const getNewsById = `-- name: GetNewsById :one
+const getNews = `-- name: GetNews :one
 SELECT id, title, publish_date, description, cover_image_id, created_by_id
 FROM news
 WHERE id = $1
 `
 
-func (q *Queries) GetNewsById(ctx context.Context, id int32) (News, error) {
-	row := q.db.QueryRowContext(ctx, getNewsById, id)
+func (q *Queries) GetNews(ctx context.Context, id int32) (News, error) {
+	row := q.db.QueryRowContext(ctx, getNews, id)
 	var i News
 	err := row.Scan(
 		&i.ID,
