@@ -374,15 +374,15 @@ func (s *Server) getAllUsers(c *gin.Context) {
 
 // UPDATE USER
 type updateUserRequest struct {
-	Name            string    `json:"name"`
-	LastName        string    `json:"last_name"`
-	Email           string    `json:"email"`
-	Password        string    `json:"password"`
-	TelephoneNumber string    `json:"telephone_number"`
-	University      string    `json:"university"`
-	Department      string    `json:"department"`
+	Name            *string   `json:"name"`
+	LastName        *string   `json:"last_name"`
+	Email           *string   `json:"email"`
+	Password        *string   `json:"password"`
+	TelephoneNumber *string   `json:"telephone_number"`
+	University      *string   `json:"university"`
+	Department      *string   `json:"department"`
 	DateOfBirth     time.Time `json:"date_of_birth"`
-	Role            string    `json:"role"`
+	Role            *string   `json:"role"`
 }
 
 func (s *Server) updateUser(c *gin.Context) {
@@ -419,17 +419,63 @@ func (s *Server) updateUser(c *gin.Context) {
 		return
 	}
 
-	updatedUser, err := s.query.UpdateUser(c, sqlc.UpdateUserParams{
+	updatedUser, err := s.query.GetUser(c, id)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	if req.Name != nil {
+		updatedUser.Name = *req.Name
+	}
+
+	if req.LastName != nil {
+		updatedUser.LastName = *req.LastName
+	}
+
+	if req.Email != nil {
+		updatedUser.Email = *req.Email
+	}
+
+	if req.Password != nil {
+		updatedUser.Password = *req.Password
+	}
+
+	if req.TelephoneNumber != nil {
+		updatedUser.TelephoneNumber = *req.TelephoneNumber
+	}
+
+	if req.University != nil {
+		updatedUser.University = *req.University
+	}
+
+	if req.Department != nil {
+		updatedUser.Department = *req.Department
+	}
+	if !req.DateOfBirth.IsZero() {
+		updatedUser.DateOfBirth = req.DateOfBirth
+	}
+	if req.Role != nil {
+		updatedUser.Role = *req.Role
+	}
+	if req.TelephoneNumber != nil {
+		updatedUser.TelephoneNumber = *req.TelephoneNumber
+	}
+	user, err := s.query.UpdateUser(c, sqlc.UpdateUserParams{
 		ID:              id,
-		Name:            req.Name,
-		LastName:        req.LastName,
-		Email:           req.Email,
-		Password:        req.Password,
-		TelephoneNumber: req.TelephoneNumber,
-		University:      req.University,
-		Department:      req.Department,
-		DateOfBirth:     req.DateOfBirth,
-		Role:            req.Role,
+		Name:            updatedUser.Name,
+		LastName:        updatedUser.LastName,
+		Email:           updatedUser.Email,
+		Password:        updatedUser.Password,
+		TelephoneNumber: updatedUser.TelephoneNumber,
+		University:      updatedUser.University,
+		Department:      updatedUser.Department,
+		DateOfBirth:     updatedUser.DateOfBirth,
+		Role:            updatedUser.Role,
 	})
 
 	if err != nil {
@@ -443,15 +489,15 @@ func (s *Server) updateUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User updated successfully",
 		Data: returnUserResponse{
-			Id:              updatedUser.ID,
-			Name:            updatedUser.Name,
-			LastName:        updatedUser.LastName,
-			Email:           updatedUser.Email,
-			TelephoneNumber: updatedUser.TelephoneNumber,
-			University:      updatedUser.University,
-			Department:      updatedUser.Department,
-			DateOfBirth:     updatedUser.DateOfBirth,
-			Role:            updatedUser.Role,
+			Id:              user.ID,
+			Name:            user.Name,
+			LastName:        user.LastName,
+			Email:           user.Email,
+			TelephoneNumber: user.TelephoneNumber,
+			University:      user.University,
+			Department:      user.Department,
+			DateOfBirth:     user.DateOfBirth,
+			Role:            user.Role,
 		},
 	})
 }
