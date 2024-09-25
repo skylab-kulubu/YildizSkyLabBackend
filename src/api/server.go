@@ -74,7 +74,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 
 	//news
 	router.POST("/news", server.RequireAuth, server.createNews)
-	router.GET("/news/", server.getAllNews)
+	router.GET("/news", server.getAllNews)
 
 	server.router = router
 
