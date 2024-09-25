@@ -447,9 +447,8 @@ func (s *Server) removeTeamProject(c *gin.Context) {
 
 // ADD TEAM MEMBER
 type addTeamMemberRequest struct {
-	TeamID int32  `json:"team_id" binding:"required,min=1"`
-	UserId int32  `json:"user_id" binding:"required,min=1"`
-	Role   string `json:"role" binding:"required"`
+	TeamID int32 `json:"team_id" binding:"required,min=1"`
+	UserId int32 `json:"user_id" binding:"required,min=1"`
 }
 
 func (s *Server) addTeamMember(c *gin.Context) {
@@ -494,7 +493,7 @@ func (s *Server) addTeamMember(c *gin.Context) {
 	teamMember, err := s.query.CreateTeamMember(c, sqlc.CreateTeamMemberParams{
 		TeamID: req.TeamID,
 		UserID: req.UserId,
-		Role:   req.Role,
+		Role:   "member",
 	})
 
 	if err != nil {
@@ -513,6 +512,66 @@ func (s *Server) addTeamMember(c *gin.Context) {
 }
 
 ///////////////////////////////
+
+func (s *Server) addTeamLead(c *gin.Context) {
+	var req addTeamMemberRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	_, err := s.query.GetTeam(c, req.TeamID) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "Team not found",
+		})
+		return
+	}
+
+	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "User not found",
+		})
+		return
+	}
+
+	if ok := s.checkIfUserIsTeamLead(c, req.TeamID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to add member to this team",
+		})
+		return
+	}
+
+	teamMember, err := s.query.CreateTeamMember(c, sqlc.CreateTeamMemberParams{
+		TeamID: req.TeamID,
+		UserID: req.UserId,
+		Role:   "lead",
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Team member added successfully",
+		Data:      teamMember,
+	})
+}
 
 // REMOVE TEAM MEMBER
 type removeTeamMemberRequest struct {

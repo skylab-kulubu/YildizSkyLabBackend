@@ -338,9 +338,8 @@ func (s *Server) deleteProject(c *gin.Context) {
 
 // ADD PROJECT MEMBER
 type addProjectMemberRequest struct {
-	ProjectID int32  `json:"project_id" binding:"required,min=1"`
-	UserID    int32  `json:"user_id" binding:"required,min=1"`
-	Role      string `json:"role" binding:"required"`
+	ProjectID int32 `json:"project_id" binding:"required,min=1"`
+	UserID    int32 `json:"user_id" binding:"required,min=1"`
 }
 
 func (s *Server) addProjectMember(c *gin.Context) {
@@ -385,7 +384,7 @@ func (s *Server) addProjectMember(c *gin.Context) {
 	projectMember, err := s.query.CreateProjectMember(c, sqlc.CreateProjectMemberParams{
 		ProjectID: req.ProjectID,
 		UserID:    req.UserID,
-		Role:      req.Role,
+		Role:      "member",
 	})
 
 	if err != nil {
@@ -404,6 +403,66 @@ func (s *Server) addProjectMember(c *gin.Context) {
 }
 
 ////////////////////////
+
+func (s *Server) addProjectLead(c *gin.Context) {
+	var req addProjectMemberRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	project, err := s.query.GetProject(c, req.ProjectID) // need a better solition but work for now
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "Project not found",
+		})
+		return
+	}
+
+	_, err = s.query.GetUser(c, req.UserID)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   "User not found",
+		})
+		return
+	}
+
+	if ok := s.checkIfUserIsProjectLead(c, project.ID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this team",
+		})
+		return
+	}
+
+	projectMember, err := s.query.CreateProjectMember(c, sqlc.CreateProjectMemberParams{
+		ProjectID: req.ProjectID,
+		UserID:    req.UserID,
+		Role:      "lead",
+	})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "Project member added successfully",
+		Data:      projectMember,
+	})
+}
 
 // REMOVE PROJECT MEMBER
 type removeProjectMemberRequest struct {

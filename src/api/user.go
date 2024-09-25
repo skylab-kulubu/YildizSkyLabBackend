@@ -566,6 +566,36 @@ func (s *Server) deleteUser(c *gin.Context) {
 
 ////////////////////////
 
+func (s *Server) currentUser(c *gin.Context) {
+
+	anyUser, ok := c.Get("user")
+
+	if !ok {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   "user not found",
+		})
+	}
+
+	user := anyUser.(sqlc.User)
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "User got successfully",
+		Data: returnUserResponse{
+			Id:              user.ID,
+			Name:            user.Name,
+			LastName:        user.LastName,
+			Email:           user.Email,
+			TelephoneNumber: user.TelephoneNumber,
+			University:      user.University,
+			Department:      user.Department,
+			DateOfBirth:     user.DateOfBirth,
+			Role:            user.Role,
+		},
+	})
+}
+
 // UTILS
 
 func (s *Server) checkUserIfNotExistByEmail(c *gin.Context, email string) (int, sqlc.User) {

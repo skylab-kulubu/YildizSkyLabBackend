@@ -31,9 +31,7 @@ func main() {
 	server.Start(config.ServerAddress)
 }
 
-// BUG : Updatelere ayar cek
 // TODO: CurrentUser
-// TODO: Lead end pointlerine ayar cek
 
 // TODO: Mailing system
 // TODO: Swegger eklenecek
