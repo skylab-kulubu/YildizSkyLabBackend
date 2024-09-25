@@ -213,8 +213,8 @@ func (s *Server) getAllTeams(c *gin.Context) {
 
 // UPDATE TEAM
 type updateTeamRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description" binding:"required"`
+	Name        *string `json:"name"`
+	Description *string `json:"description" `
 }
 
 func (s *Server) updateTeam(c *gin.Context) {
@@ -252,10 +252,28 @@ func (s *Server) updateTeam(c *gin.Context) {
 		return
 	}
 
-	updatedTeam, err := s.query.UpdateTeam(c, sqlc.UpdateTeamParams{
+	updatedTeam, err := s.query.GetTeam(c, id)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	if req.Name != nil {
+		updatedTeam.Name = *req.Name
+
+	}
+
+	if req.Description != nil {
+		updatedTeam.Description = *req.Description
+	}
+
+	team, err := s.query.UpdateTeam(c, sqlc.UpdateTeamParams{
 		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
+		Name:        updatedTeam.Name,
+		Description: updatedTeam.Description,
 	})
 
 	if err != nil {
@@ -268,7 +286,7 @@ func (s *Server) updateTeam(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Team updated successfully",
-		Data:      updatedTeam,
+		Data:      team,
 	})
 }
 

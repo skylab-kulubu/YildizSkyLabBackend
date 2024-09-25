@@ -215,8 +215,8 @@ func (s *Server) getAllProjects(c *gin.Context) {
 
 // UPDATE PROJECT
 type updateProjectRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description" binding:"required"`
+	Name        *string `json:"name"`
+	Description *string `json:"description" `
 }
 
 func (s *Server) updateProject(c *gin.Context) {
@@ -254,10 +254,28 @@ func (s *Server) updateProject(c *gin.Context) {
 		return
 	}
 
-	updatedProject, err := s.query.UpdateProject(c, sqlc.UpdateProjectParams{
+	updatedProject, err := s.query.GetProject(c, id)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	if req.Name != nil {
+		updatedProject.Name = *req.Name
+
+	}
+
+	if req.Description != nil {
+		updatedProject.Description = *req.Description
+	}
+
+	project, err := s.query.UpdateProject(c, sqlc.UpdateProjectParams{
 		ID:          id,
-		Name:        req.Name,
-		Description: req.Description,
+		Name:        updatedProject.Name,
+		Description: updatedProject.Description,
 	})
 
 	if err != nil {
@@ -270,7 +288,7 @@ func (s *Server) updateProject(c *gin.Context) {
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Project updated successfully",
-		Data:      updatedProject,
+		Data:      project,
 	})
 }
 

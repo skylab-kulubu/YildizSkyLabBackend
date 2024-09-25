@@ -32,6 +32,7 @@ func main() {
 }
 
 // BUG : Updatelere ayar cek
+// TODO: CurrentUser
 // TODO: Lead end pointlerine ayar cek
 
 // TODO: Mailing system
