@@ -49,6 +49,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.POST("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamProject))
 	router.DELETE("/teams/project", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.removeTeamProject))
 	router.POST("/teams/member", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.addTeamMember))
+	router.POST("/teams/lead", server.RequireAuth, server.RequireRole([]string{admin}, server.addTeamLead))
 	router.DELETE("/teams/member", server.RequireAuth, server.RequireRole([]string{admin, lead}, server.removeTeamMember))
 
 	//user
@@ -58,6 +59,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.GET("/users", server.RequireAuth, server.getAllUsers)
 	router.PUT("/users/:id", server.RequireAuth, server.updateUser)
 	router.DELETE("/users/:id", server.RequireAuth, server.deleteUser)
+	router.GET("/users/current", server.RequireAuth, server.currentUser)
 
 	//project
 	router.POST("/projects", server.RequireAuth, server.createProject)
@@ -66,6 +68,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.PUT("/projects/:id", server.RequireAuth, server.updateProject)
 	router.DELETE("/projects/:id", server.RequireAuth, server.deleteProject)
 	router.POST("/projects/member", server.RequireAuth, server.addProjectMember)
+	router.POST("/projects/lead", server.RequireAuth, server.addProjectLead)
 	router.DELETE("/projects/member", server.RequireAuth, server.removeProjectMember)
 
 	//image
