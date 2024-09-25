@@ -30,3 +30,11 @@ func main() {
 	server := api.NewServer(sqlc.New(db), config.Secret)
 	server.Start(config.ServerAddress)
 }
+
+// BUG : Updatelere ayar cek
+// TODO: Lead end pointlerine ayar cek
+
+// TODO: Mailing system
+// TODO: Swegger eklenecek
+
+// SKY LOG

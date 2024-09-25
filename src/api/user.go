@@ -374,7 +374,6 @@ func (s *Server) getAllUsers(c *gin.Context) {
 
 // UPDATE USER
 type updateUserRequest struct {
-	ID              int32     `json:"id" binding:"required"`
 	Name            string    `json:"name"`
 	LastName        string    `json:"last_name"`
 	Email           string    `json:"email"`
@@ -412,7 +411,7 @@ func (s *Server) updateUser(c *gin.Context) {
 		return
 	}
 
-	if ok := s.checkUserPermission(c, req.ID); !ok {
+	if ok := s.checkUserPermission(c, id); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to update this user",

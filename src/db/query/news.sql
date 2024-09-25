@@ -3,7 +3,7 @@ INSERT INTO news (title, publish_date, description, cover_image_id, created_by_i
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, title, publish_date, description, cover_image_id, created_by_id;
 
--- name: GetNewsById :one
+-- name: GetNews :one
 SELECT id, title, publish_date, description, cover_image_id, created_by_id
 FROM news
 WHERE id = $1;
@@ -42,3 +42,23 @@ JOIN images i ON i.id = n.cover_image_id
 JOIN users u ON u.id = n.created_by_id
 ORDER BY n.id DESC
 LIMIT $1 OFFSET $2;
+
+-- name: GetANewsWithDetails :one
+SELECT 
+    n.id,
+    n.title,
+    n.publish_date,
+    n.description,
+    i.id as image_id,
+    i.url as image_url,
+    i.type as image_type,
+    u.id as user_id,
+    u.name as user_name,
+    u.last_name as user_last_name,
+    u.email as user_email,
+    u.university as user_university,
+    u.department as user_department
+FROM news n
+JOIN images i ON i.id = n.cover_image_id
+JOIN users u ON u.id = n.created_by_id
+WHERE n.id = $1;
