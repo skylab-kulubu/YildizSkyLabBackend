@@ -233,7 +233,7 @@ func (s *Server) getNews(c *gin.Context) {
 		return
 	}
 
-	news, err := s.query.GetANewsWithDetails(c, req.ID)
+	n, err := s.query.GetANewsWithDetails(c, req.ID)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -250,9 +250,47 @@ func (s *Server) getNews(c *gin.Context) {
 		return
 	}
 
+	config, err := util.LoadConfig(".")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   "Config load error",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "News got successfully",
-		Data:      news,
+		Data: NewsWithDetails{
+			ID:          int(n.ID),
+			Title:       n.Title,
+			PublishDate: n.PublishDate,
+			Description: n.Description,
+			CoverImage: struct {
+				ID   int    `json:"id"`
+				URL  string `json:"url"`
+				Type string `json:"type"`
+			}{
+				ID:   int(n.ImageID),
+				URL:  config.Domain + "/images/" + n.ImageUrl,
+				Type: n.ImageType,
+			},
+			CreatedBy: struct {
+				ID         int    `json:"id"`
+				Name       string `json:"name"`
+				LastName   string `json:"last_name"`
+				Email      string `json:"email"`
+				University string `json:"university"`
+				Department string `json:"department"`
+			}{
+				ID:         int(n.UserID),
+				Name:       n.UserName,
+				LastName:   n.UserLastName,
+				Email:      n.UserEmail,
+				University: n.UserUniversity,
+				Department: n.UserDepartment,
+			},
+		},
 	})
 }

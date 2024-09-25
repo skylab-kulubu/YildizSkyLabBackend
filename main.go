@@ -31,8 +31,6 @@ func main() {
 	server.Start(config.ServerAddress)
 }
 
-// TODO: CurrentUser
-
 // TODO: Mailing system
 // TODO: Swegger eklenecek
 
