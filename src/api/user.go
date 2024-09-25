@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 	"time"
 	"yildizskylab/src/db/sqlc"
 
@@ -386,6 +387,21 @@ type updateUserRequest struct {
 }
 
 func (s *Server) updateUser(c *gin.Context) {
+	var id int32
+
+	idParam := c.Param("id")
+
+	i, err := strconv.Atoi(idParam)
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	id = int32(i)
+
 	var req updateUserRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -405,7 +421,7 @@ func (s *Server) updateUser(c *gin.Context) {
 	}
 
 	updatedUser, err := s.query.UpdateUser(c, sqlc.UpdateUserParams{
-		ID:              req.ID,
+		ID:              id,
 		Name:            req.Name,
 		LastName:        req.LastName,
 		Email:           req.Email,

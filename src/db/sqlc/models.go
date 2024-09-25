@@ -19,6 +19,25 @@ type Announcement struct {
 	DeletedAt sql.NullTime `json:"deleted_at"`
 }
 
+type Image struct {
+	ID        int32        `json:"id"`
+	Type      string       `json:"type"`
+	Name      string       `json:"name"`
+	Data      []byte       `json:"data"`
+	Url       string       `json:"url"`
+	CreatedBy int32        `json:"created_by"`
+	CreatedAt sql.NullTime `json:"created_at"`
+}
+
+type News struct {
+	ID           int32         `json:"id"`
+	Title        string        `json:"title"`
+	PublishDate  time.Time     `json:"publish_date"`
+	Description  string        `json:"description"`
+	CoverImageID sql.NullInt32 `json:"cover_image_id"`
+	CreatedByID  sql.NullInt32 `json:"created_by_id"`
+}
+
 type Project struct {
 	ID          int32        `json:"id"`
 	Name        string       `json:"name"`

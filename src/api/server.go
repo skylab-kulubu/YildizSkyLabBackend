@@ -56,7 +56,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.POST("/users/login", server.login)
 	router.GET("/users/:id", server.RequireAuth, server.getUser)
 	router.GET("/users", server.RequireAuth, server.getAllUsers)
-	router.PUT("/users/", server.RequireAuth, server.updateUser)
+	router.PUT("/users/:id", server.RequireAuth, server.updateUser)
 	router.DELETE("/users/:id", server.RequireAuth, server.deleteUser)
 
 	//project
@@ -67,6 +67,14 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.DELETE("/projects/:id", server.RequireAuth, server.deleteProject)
 	router.POST("/projects/member", server.RequireAuth, server.addProjectMember)
 	router.DELETE("/projects/member", server.RequireAuth, server.removeProjectMember)
+
+	//image
+	router.POST("/images", server.RequireAuth, server.createImage)
+	router.GET("/images/:url", server.getImage)
+
+	//news
+	router.POST("/news", server.RequireAuth, server.createNews)
+	router.GET("/news", server.getAllNews)
 
 	server.router = router
 
