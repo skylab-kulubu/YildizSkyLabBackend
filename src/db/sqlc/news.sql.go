@@ -25,7 +25,16 @@ type CreateNewsParams struct {
 	CreatedByID  sql.NullInt32 `json:"created_by_id"`
 }
 
-func (q *Queries) CreateNews(ctx context.Context, arg CreateNewsParams) (News, error) {
+type CreateNewsRow struct {
+	ID           int32         `json:"id"`
+	Title        string        `json:"title"`
+	PublishDate  time.Time     `json:"publish_date"`
+	Description  string        `json:"description"`
+	CoverImageID sql.NullInt32 `json:"cover_image_id"`
+	CreatedByID  sql.NullInt32 `json:"created_by_id"`
+}
+
+func (q *Queries) CreateNews(ctx context.Context, arg CreateNewsParams) (CreateNewsRow, error) {
 	row := q.db.QueryRowContext(ctx, createNews,
 		arg.Title,
 		arg.PublishDate,
@@ -33,7 +42,7 @@ func (q *Queries) CreateNews(ctx context.Context, arg CreateNewsParams) (News, e
 		arg.CoverImageID,
 		arg.CreatedByID,
 	)
-	var i News
+	var i CreateNewsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,
@@ -124,15 +133,24 @@ type GetAllNewsParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) GetAllNews(ctx context.Context, arg GetAllNewsParams) ([]News, error) {
+type GetAllNewsRow struct {
+	ID           int32         `json:"id"`
+	Title        string        `json:"title"`
+	PublishDate  time.Time     `json:"publish_date"`
+	Description  string        `json:"description"`
+	CoverImageID sql.NullInt32 `json:"cover_image_id"`
+	CreatedByID  sql.NullInt32 `json:"created_by_id"`
+}
+
+func (q *Queries) GetAllNews(ctx context.Context, arg GetAllNewsParams) ([]GetAllNewsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getAllNews, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []News{}
+	items := []GetAllNewsRow{}
 	for rows.Next() {
-		var i News
+		var i GetAllNewsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -160,9 +178,18 @@ FROM news
 WHERE id = $1
 `
 
-func (q *Queries) GetNews(ctx context.Context, id int32) (News, error) {
+type GetNewsRow struct {
+	ID           int32         `json:"id"`
+	Title        string        `json:"title"`
+	PublishDate  time.Time     `json:"publish_date"`
+	Description  string        `json:"description"`
+	CoverImageID sql.NullInt32 `json:"cover_image_id"`
+	CreatedByID  sql.NullInt32 `json:"created_by_id"`
+}
+
+func (q *Queries) GetNews(ctx context.Context, id int32) (GetNewsRow, error) {
 	row := q.db.QueryRowContext(ctx, getNews, id)
-	var i News
+	var i GetNewsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Title,

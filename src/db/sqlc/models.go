@@ -13,7 +13,7 @@ type Announcement struct {
 	ID        int32        `json:"id"`
 	Title     string       `json:"title"`
 	Body      string       `json:"body"`
-	AuthorId  int32        `json:"author_id"`
+	AuthorID  int32        `json:"author_id"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt time.Time    `json:"updated_at"`
 	DeletedAt sql.NullTime `json:"deleted_at"`
@@ -26,7 +26,9 @@ type Image struct {
 	Data      []byte       `json:"data"`
 	Url       string       `json:"url"`
 	CreatedBy int32        `json:"created_by"`
-	CreatedAt sql.NullTime `json:"created_at"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+	DeletedAt sql.NullTime `json:"deleted_at"`
 }
 
 type News struct {
@@ -36,6 +38,9 @@ type News struct {
 	Description  string        `json:"description"`
 	CoverImageID sql.NullInt32 `json:"cover_image_id"`
 	CreatedByID  sql.NullInt32 `json:"created_by_id"`
+	CreatedAt    time.Time     `json:"created_at"`
+	UpdatedAt    time.Time     `json:"updated_at"`
+	DeletedAt    sql.NullTime  `json:"deleted_at"`
 }
 
 type Project struct {

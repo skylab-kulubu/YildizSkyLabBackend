@@ -90,67 +90,6 @@ func (s *Server) getProject(c *gin.Context) {
 		return
 	}
 
-	leadsIds, err := s.query.GetProjectLeadByProjectId(c, project.ID)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	var leads []returnUserResponse
-
-	for _, leadId := range leadsIds {
-		lead, err := s.query.GetUserWithNoDetails(c, leadId)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-			return
-		}
-
-		leadToReturn := returnUserResponse{
-			Id:              lead.ID,
-			Name:            lead.Name,
-			LastName:        lead.LastName,
-			Email:           lead.Email,
-			TelephoneNumber: lead.TelephoneNumber,
-			University:      lead.University,
-			Department:      lead.Department,
-			Role:            lead.Role,
-			DateOfBirth:     lead.DateOfBirth,
-		}
-
-		leads = append(leads, leadToReturn)
-	}
-
-	teamIds, err := s.query.GetProjectTeamByProjectId(c, project.ID)
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	var teams []sqlc.Team
-
-	for _, teamId := range teamIds {
-		team, err := s.query.GetTeam(c, teamId)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-			return
-		}
-		teams = append(teams, team)
-	}
-
 	if ok := s.checkIfUserIsProjectLead(c, project.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
@@ -166,8 +105,8 @@ func (s *Server) getProject(c *gin.Context) {
 			Id:          project.ID,
 			Name:        project.Name,
 			Description: project.Description,
-			ProjectLead: leads,
-			Teams:       teams,
+			//ProjectLead: leads,
+			//Teams:       teams,
 		},
 	})
 }
@@ -363,7 +302,7 @@ func (s *Server) addProjectMember(c *gin.Context) {
 		return
 	}
 
-	_, err = s.query.GetUser(c, req.UserID)
+	_, err = s.query.GetUserWithDetails(c, req.UserID)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{
@@ -425,7 +364,7 @@ func (s *Server) addProjectLead(c *gin.Context) {
 		return
 	}
 
-	_, err = s.query.GetUser(c, req.UserID)
+	_, err = s.query.GetUserWithDetails(c, req.UserID)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{

@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -166,7 +167,7 @@ func (s *Server) login(c *gin.Context) {
 	// generate a jwt toke
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.UserID,
+		"sub": user.ID,
 		"exp": time.Now().Add(time.Hour * 24).Unix(),
 	})
 
@@ -227,8 +228,7 @@ func (s *Server) getUser(c *gin.Context) {
 		return
 	}
 
-	user, err := s.query.GetUser(c, req.ID)
-
+	user, err := s.query.GetUserWithDetails(c, req.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, Response{
@@ -244,56 +244,24 @@ func (s *Server) getUser(c *gin.Context) {
 		return
 	}
 
-	teamIds, err := s.query.GetTeamsByUserId(c, user.ID)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
 	var teams []sqlc.Team
-
-	for _, teamId := range teamIds {
-		team, err := s.query.GetTeam(c, teamId)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-			return
-		}
-
-		teams = append(teams, team)
-	}
-
-	projectIds, err := s.query.GetProjectsByUserId(c, user.ID)
+	err = json.Unmarshal(user.Teams, &teams)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
+		c.JSON(http.StatusInternalServerError, Response{
 			IsSuccess: false,
 			Message:   err.Error(),
 		})
-		return
 	}
 
 	var projects []sqlc.Project
+	err = json.Unmarshal(user.Projects, &projects)
 
-	for _, projectId := range projectIds {
-		project, err := s.query.GetProject(c, projectId)
-
-		if err != nil {
-			c.JSON(http.StatusBadRequest, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-			return
-		}
-
-		projects = append(projects, project)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 	}
 
 	c.JSON(http.StatusOK, Response{
@@ -419,7 +387,7 @@ func (s *Server) updateUser(c *gin.Context) {
 		return
 	}
 
-	updatedUser, err := s.query.GetUser(c, id)
+	updatedUser, err := s.query.GetUserWithDetails(c, id)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{

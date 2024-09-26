@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 )
 
@@ -165,103 +166,129 @@ func (q *Queries) GetAllUsers(ctx context.Context, arg GetAllUsersParams) ([]Use
 	return items, nil
 }
 
-const getUser = `-- name: GetUser :one
-SELECT id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at from users where id  = $1 and deleted_at is null
-`
-
-func (q *Queries) GetUser(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.LastName,
-		&i.Email,
-		&i.Password,
-		&i.TelephoneNumber,
-		&i.University,
-		&i.Department,
-		&i.DateOfBirth,
-		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    u.id AS user_id,
-		u.name,
-		u.last_name,
-		u.email,
-		u.password,
-		u.telephone_number,
-		u.role,
-		u.university,
-		u.department,
-		u.date_of_birth,
-		COALESCE(STRING_AGG(DISTINCT t.name, ',')) AS team_names,
-		COALESCE(STRING_AGG(DISTINCT p.name, ',')) AS project_names
-FROM
-		users u
-LEFT JOIN
-		team_users ut on u.id =ut.user_id
-LEFT JOIN
-		teams t on ut.team_id = t.id
-LEFT JOIN
-    project_users up on u.id = up.user_id
-LEFT JOIN
-    projects p on up.project_id = p.id
-WHERE
-    u.email = $1 AND u.deleted_at IS NULL
-GROUP BY
-		u.id, u.email
+SELECT 
+        u.id, 
+        u.name, 
+        u.last_name, 
+        u.email, 
+        u.password, 
+        u.telephone_number, 
+        u.university, 
+        u.department, 
+        u.date_of_birth, 
+        u.role,
+        json_agg(
+        	json_build_object(
+                        'team_id', t.id,
+                        'team_name', t.name,
+                        'team_description', t.description
+        	)
+        ) as teams,
+        json_agg(
+                json_build_object(
+                        'project_id', p.id,
+                        'projet_name', p.name,
+                        'project_description', p.description
+                )
+        )as projects
+FROM users u 
+LEFT JOIN team_users tu ON u.id = tu.user_id  
+LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN project_users pu ON u.id = pu.user_id
+LEFT JOIN projects p on pu.project_id = p.id
+WHERE u.email = $1
+GROUP BY u.id
 `
 
 type GetUserByEmailRow struct {
-	UserID          int32       `json:"user_id"`
-	Name            string      `json:"name"`
-	LastName        string      `json:"last_name"`
-	Email           string      `json:"email"`
-	Password        string      `json:"password"`
-	TelephoneNumber string      `json:"telephone_number"`
-	Role            string      `json:"role"`
-	University      string      `json:"university"`
-	Department      string      `json:"department"`
-	DateOfBirth     time.Time   `json:"date_of_birth"`
-	TeamNames       interface{} `json:"team_names"`
-	ProjectNames    interface{} `json:"project_names"`
+	ID              int32           `json:"id"`
+	Name            string          `json:"name"`
+	LastName        string          `json:"last_name"`
+	Email           string          `json:"email"`
+	Password        string          `json:"password"`
+	TelephoneNumber string          `json:"telephone_number"`
+	University      string          `json:"university"`
+	Department      string          `json:"department"`
+	DateOfBirth     time.Time       `json:"date_of_birth"`
+	Role            string          `json:"role"`
+	Teams           json.RawMessage `json:"teams"`
+	Projects        json.RawMessage `json:"projects"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
 	err := row.Scan(
-		&i.UserID,
+		&i.ID,
 		&i.Name,
 		&i.LastName,
 		&i.Email,
 		&i.Password,
 		&i.TelephoneNumber,
-		&i.Role,
 		&i.University,
 		&i.Department,
 		&i.DateOfBirth,
-		&i.TeamNames,
-		&i.ProjectNames,
+		&i.Role,
+		&i.Teams,
+		&i.Projects,
 	)
 	return i, err
 }
 
-const getUserWithNoDetails = `-- name: GetUserWithNoDetails :one
-Select id, name, last_name, email, password, telephone_number, university, department, date_of_birth, role, created_at, updated_at, deleted_at from users where id = $1 and deleted_at is null
+const getUserWithDetails = `-- name: GetUserWithDetails :one
+SELECT 
+        u.id, 
+        u.name, 
+        u.last_name, 
+        u.email, 
+        u.password, 
+        u.telephone_number, 
+        u.university, 
+        u.department, 
+        u.date_of_birth, 
+        u.role,
+        json_agg(
+        	json_build_object(
+                        'team_id', t.id,
+                        'team_name', t.name,
+                        'team_description', t.description
+        	)
+        ) as teams,
+        json_agg(
+                json_build_object(
+                        'project_id', p.id,
+                        'projet_name', p.name,
+                        'project_description', p.description
+                )
+        )as projects
+FROM users u 
+LEFT JOIN team_users tu ON u.id = tu.user_id  
+LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN project_users pu ON u.id = pu.user_id
+LEFT JOIN projects p on pu.project_id = p.id
+WHERE u.id = $1
+GROUP BY u.id
 `
 
-func (q *Queries) GetUserWithNoDetails(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserWithNoDetails, id)
-	var i User
+type GetUserWithDetailsRow struct {
+	ID              int32           `json:"id"`
+	Name            string          `json:"name"`
+	LastName        string          `json:"last_name"`
+	Email           string          `json:"email"`
+	Password        string          `json:"password"`
+	TelephoneNumber string          `json:"telephone_number"`
+	University      string          `json:"university"`
+	Department      string          `json:"department"`
+	DateOfBirth     time.Time       `json:"date_of_birth"`
+	Role            string          `json:"role"`
+	Teams           json.RawMessage `json:"teams"`
+	Projects        json.RawMessage `json:"projects"`
+}
+
+func (q *Queries) GetUserWithDetails(ctx context.Context, id int32) (GetUserWithDetailsRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserWithDetails, id)
+	var i GetUserWithDetailsRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -273,9 +300,8 @@ func (q *Queries) GetUserWithNoDetails(ctx context.Context, id int32) (User, err
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
+		&i.Teams,
+		&i.Projects,
 	)
 	return i, err
 }

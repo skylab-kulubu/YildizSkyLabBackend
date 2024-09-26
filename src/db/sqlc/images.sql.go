@@ -7,11 +7,10 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 )
 
 const getImageByUrl = `-- name: GetImageByUrl :one
-SELECT id, type, name, data, url, created_by, created_at
+SELECT id, type, name, data, url, created_by, created_at, updated_at, deleted_at
 FROM images
 WHERE url = $1
 `
@@ -27,6 +26,8 @@ func (q *Queries) GetImageByUrl(ctx context.Context, url string) (Image, error) 
 		&i.Url,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -34,7 +35,7 @@ func (q *Queries) GetImageByUrl(ctx context.Context, url string) (Image, error) 
 const saveImage = `-- name: SaveImage :one
 INSERT INTO images (type, name, data, url, created_by)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, type, name, url, created_by, created_at
+RETURNING id, type, name, data, url, created_by, created_at, updated_at, deleted_at
 `
 
 type SaveImageParams struct {
@@ -45,16 +46,7 @@ type SaveImageParams struct {
 	CreatedBy int32  `json:"created_by"`
 }
 
-type SaveImageRow struct {
-	ID        int32        `json:"id"`
-	Type      string       `json:"type"`
-	Name      string       `json:"name"`
-	Url       string       `json:"url"`
-	CreatedBy int32        `json:"created_by"`
-	CreatedAt sql.NullTime `json:"created_at"`
-}
-
-func (q *Queries) SaveImage(ctx context.Context, arg SaveImageParams) (SaveImageRow, error) {
+func (q *Queries) SaveImage(ctx context.Context, arg SaveImageParams) (Image, error) {
 	row := q.db.QueryRowContext(ctx, saveImage,
 		arg.Type,
 		arg.Name,
@@ -62,14 +54,17 @@ func (q *Queries) SaveImage(ctx context.Context, arg SaveImageParams) (SaveImage
 		arg.Url,
 		arg.CreatedBy,
 	)
-	var i SaveImageRow
+	var i Image
 	err := row.Scan(
 		&i.ID,
 		&i.Type,
 		&i.Name,
+		&i.Data,
 		&i.Url,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }

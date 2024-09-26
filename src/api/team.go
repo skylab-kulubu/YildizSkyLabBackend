@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"yildizskylab/src/db/sqlc"
@@ -57,7 +58,8 @@ type getTeamResponse struct {
 	Id          int32                `json:"id"`
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
-	TeamLeads   []returnUserResponse `json:"team_leads"`
+	TeamLeads   []returnUserResponse `json:"leads"`
+	TeamMembers []returnUserResponse `json:"members"`
 	Projects    []sqlc.Project       `json:"projects"`
 }
 
@@ -89,72 +91,39 @@ func (s *Server) getTeam(c *gin.Context) {
 		return
 	}
 
-	leadIds, err := s.query.GetTeamLeadByTeamId(c, team.ID)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	var leads []returnUserResponse
-
-	for _, leadId := range leadIds {
-		lead, err := s.query.GetUserWithNoDetails(c, leadId)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-			return
-		}
-
-		leadToReturn := returnUserResponse{
-			Id:              lead.ID,
-			Name:            lead.Name,
-			LastName:        lead.LastName,
-			Email:           lead.Email,
-			TelephoneNumber: lead.TelephoneNumber,
-			University:      lead.University,
-			Department:      lead.Department,
-			Role:            lead.Role,
-			DateOfBirth:     lead.DateOfBirth,
-		}
-
-		leads = append(leads, leadToReturn)
-	}
-
-	projectIds, err := s.query.GetTeamProjectByTeamId(c, team.ID)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, Response{
-			IsSuccess: false,
-			Message:   err.Error(),
-		})
-		return
-	}
-
-	var projects []sqlc.Project
-
-	for _, projectId := range projectIds {
-		project, err := s.query.GetProject(c, projectId)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, Response{
-				IsSuccess: false,
-				Message:   err.Error(),
-			})
-		}
-		projects = append(projects, project)
-	}
-
 	if ok := s.checkIfUserIsTeamLead(c, team.ID); !ok {
 		c.JSON(http.StatusForbidden, Response{
 			IsSuccess: false,
 			Message:   "You are not authorized to see this team",
 		})
 		return
+	}
+
+	var leads []returnUserResponse
+	err = json.Unmarshal(team.Leads, &leads)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	var members []returnUserResponse
+	err = json.Unmarshal(team.Members, &members)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	var projects []sqlc.Project
+	err = json.Unmarshal(team.Projects, &projects)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
 	}
 
 	c.JSON(http.StatusOK, Response{
@@ -165,6 +134,7 @@ func (s *Server) getTeam(c *gin.Context) {
 			Name:        team.Name,
 			Description: team.Description,
 			TeamLeads:   leads,
+			TeamMembers: members,
 			Projects:    projects,
 		},
 	})
@@ -472,7 +442,7 @@ func (s *Server) addTeamMember(c *gin.Context) {
 		return
 	}
 
-	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
+	_, err = s.query.GetUserWithDetails(c, req.UserId) // need a better solition but work for now
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{
@@ -534,7 +504,7 @@ func (s *Server) addTeamLead(c *gin.Context) {
 		return
 	}
 
-	_, err = s.query.GetUser(c, req.UserId) // need a better solition but work for now
+	_, err = s.query.GetUserWithDetails(c, req.UserId) // need a better solition but work for now
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{

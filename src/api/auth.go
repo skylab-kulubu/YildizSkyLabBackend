@@ -50,7 +50,7 @@ func (s *Server) RequireAuth(c *gin.Context) {
 
 		intID := int32(id.(float64))
 
-		userRow, err := s.query.GetUser(c, intID)
+		userRow, err := s.query.GetUserWithDetails(c, intID)
 
 		user := sqlc.User{
 			ID:              userRow.ID,

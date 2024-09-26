@@ -112,6 +112,7 @@ func (s *Server) getImage(c *gin.Context) {
 
 }
 
+// UTILS
 func genereteUrl() string {
 	randomBytes := make([]byte, 64)
 	_, err := rand.Read(randomBytes)
