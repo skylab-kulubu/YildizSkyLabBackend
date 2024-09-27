@@ -139,6 +139,7 @@ func (s *Server) login(c *gin.Context) {
 
 	user, err := s.query.GetUserByEmail(c, req.Email)
 
+	//TODO: refactor
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, Response{
@@ -196,7 +197,7 @@ type getUserRequest struct {
 }
 
 type getUserResponseWithDetails struct {
-	Id              int32          `json:"id"`
+	ID              int32          `json:"id"`
 	Name            string         `json:"name"`
 	LastName        string         `json:"last_name"`
 	Email           string         `json:"email"`
@@ -268,7 +269,7 @@ func (s *Server) getUser(c *gin.Context) {
 		IsSuccess: true,
 		Message:   "User got successfully",
 		Data: getUserResponseWithDetails{
-			Id:              user.ID,
+			ID:              user.ID,
 			Name:            user.Name,
 			LastName:        user.LastName,
 			Email:           user.Email,
@@ -618,4 +619,105 @@ func (s *Server) checkUserPermission(c *gin.Context, userId int32) bool {
 
 	return false
 
+}
+
+func (s *Server) getUserWithTeams(c *gin.Context) {
+	var req getUserRequest
+
+	if err := c.ShouldBindUri(&req); err != nil {
+		c.JSON(http.StatusBadRequest, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+		return
+	}
+
+	if ok := s.checkUserPermission(c, req.ID); !ok {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "You are not authorized to see this user",
+		})
+		return
+	}
+
+	userWithDetails, err := s.query.GetUserWithTeams(c, req.ID)
+
+	if err != nil {
+		c.JSON(http.StatusForbidden, Response{
+			IsSuccess: false,
+			Message:   "Hata",
+		})
+		return
+	}
+
+	var user getUserResponseWithDetails
+
+	user.ID = userWithDetails[0].ID
+	user.Name = userWithDetails[0].Name
+	user.LastName = userWithDetails[0].LastName
+	user.Email = userWithDetails[0].Email
+	user.TelephoneNumber = userWithDetails[0].TelephoneNumber
+	user.Role = userWithDetails[0].Role
+	user.University = userWithDetails[0].University
+	user.Department = userWithDetails[0].Department
+	user.DateOfBirth = userWithDetails[0].DateOfBirth
+
+	teams := []sqlc.Team{}
+
+	if !userWithDetails[0].TeamID.Valid {
+		user.Teams = nil
+	} else {
+		for _, ut := range userWithDetails {
+			team := sqlc.Team{
+				ID:          ut.TeamID.Int32,
+				Name:        ut.TeamName.String,
+				Description: ut.TeamDescription.String,
+			}
+			teams = append(teams, team)
+		}
+
+		seen := make(map[int32]bool)
+
+		for _, team := range teams {
+			if !seen[team.ID] {
+				user.Teams = append(user.Teams, team)
+				seen[team.ID] = true
+			}
+		}
+
+	}
+
+	projects := []sqlc.Project{}
+
+	if !userWithDetails[0].ProjectID.Valid {
+		user.Projects = nil
+	} else {
+		for _, up := range userWithDetails {
+			project := sqlc.Project{
+				ID:          up.ProjectID.Int32,
+				Name:        up.ProjectName.String,
+				Description: up.ProjectDescription.String,
+			}
+			projects = append(projects, project)
+		}
+
+		seen := make(map[int32]bool)
+
+		for _, project := range projects {
+			if !seen[project.ID] {
+				user.Projects = append(user.Projects, project)
+				seen[project.ID] = true
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, Response{
+		IsSuccess: true,
+		Message:   "User got successfully",
+		Data:      user,
+	})
+}
+
+func (s *Server) deneme2(c *gin.Context) {
+	c.JSON(200, nil)
 }

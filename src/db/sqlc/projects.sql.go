@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const createProject = `-- name: CreateProject :one
@@ -94,19 +95,73 @@ func (q *Queries) GetAllProjects(ctx context.Context, arg GetAllProjectsParams) 
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, description, created_at, updated_at, deleted_at FROM projects WHERE id = $1 AND deleted_at IS NULL
+SELECT
+    p.id,
+    p.name,
+    p.description,
+    json_agg(
+        json_build_object(
+                'user_id', u.id,
+                'user_name', u.name,
+                'user_last_name', u.last_name,
+                'user_email', u.email,
+                'user_password', u.password,
+                'user_telephone_number', u.telephone_number,
+                'user_university', u.university,
+                'user_department', u.department,
+                'user_date_of_birth', u.date_of_birth,
+                'user_role', u.role
+        )
+    ) as leads,
+    json_agg(
+        json_build_object(
+                'user_id', u.id,
+                'user_name', u.name,
+                'user_last_name', u.last_name,
+                'user_email', u.email,
+                'user_password', u.password,
+                'user_telephone_number', u.telephone_number,
+                'user_university', u.university,
+                'user_department', u.department,
+                'user_date_of_birth', u.date_of_birth,
+                'user_role', u.role
+        )
+    ) as members,
+    json_agg(
+            json_build_object(
+                    'team_id', t.id,
+                    'team_name', t.name,
+                    'team_description', t.description
+            )
+    ) as teams
+FROM projects p
+LEFT JOIN project_users pu ON p.id = pu.project_id AND pu.role = 'lead'
+LEFT JOIN users u on pu.user_id = u.id
+LEFT JOIN team_projects tp ON p.id = tp.project_id
+LEFT JOIN teams t on tp.team_id = t.id
+WHERE p.id = $1
+GROUP BY p.id
 `
 
-func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
+type GetProjectRow struct {
+	ID          int32           `json:"id"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Leads       json.RawMessage `json:"leads"`
+	Members     json.RawMessage `json:"members"`
+	Teams       json.RawMessage `json:"teams"`
+}
+
+func (q *Queries) GetProject(ctx context.Context, id int32) (GetProjectRow, error) {
 	row := q.db.QueryRowContext(ctx, getProject, id)
-	var i Project
+	var i GetProjectRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
+		&i.Leads,
+		&i.Members,
+		&i.Teams,
 	)
 	return i, err
 }

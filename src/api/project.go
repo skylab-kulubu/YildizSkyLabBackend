@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"yildizskylab/src/db/sqlc"
@@ -58,7 +59,8 @@ type getProjectResponse struct {
 	Id          int32                `json:"id"`
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
-	ProjectLead []returnUserResponse `json:"project_lead"`
+	Leads       []returnUserResponse `json:"leads"`
+	Members     []returnUserResponse `json:"members"`
 	Teams       []sqlc.Team          `json:"teams"`
 }
 
@@ -97,7 +99,32 @@ func (s *Server) getProject(c *gin.Context) {
 		})
 		return
 	}
+	var leads []returnUserResponse
+	err = json.Unmarshal(project.Leads, &leads)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
 
+	var members []returnUserResponse
+	err = json.Unmarshal(project.Members, &members)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
+
+	var teams []sqlc.Team
+	err = json.Unmarshal(project.Teams, &teams)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, Response{
+			IsSuccess: false,
+			Message:   err.Error(),
+		})
+	}
 	c.JSON(http.StatusOK, Response{
 		IsSuccess: true,
 		Message:   "Project got successfully",
@@ -105,8 +132,9 @@ func (s *Server) getProject(c *gin.Context) {
 			Id:          project.ID,
 			Name:        project.Name,
 			Description: project.Description,
-			//ProjectLead: leads,
-			//Teams:       teams,
+			Leads:       leads,
+			Members:     members,
+			Teams:       teams,
 		},
 	})
 }

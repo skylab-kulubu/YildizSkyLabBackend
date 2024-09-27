@@ -60,6 +60,7 @@ func NewServer(query *sqlc.Queries, secret string) *Server {
 	router.PUT("/users/:id", server.RequireAuth, server.updateUser)
 	router.DELETE("/users/:id", server.RequireAuth, server.deleteUser)
 	router.GET("/users/current", server.RequireAuth, server.currentUser)
+	router.GET("/users/deneme/:id", server.RequireAuth, server.getUserWithTeams)
 
 	//project
 	router.POST("/projects", server.RequireAuth, server.createProject)

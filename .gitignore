@@ -1,3 +1,4 @@
 Makefile
 app.env
 bin
+init.sql
