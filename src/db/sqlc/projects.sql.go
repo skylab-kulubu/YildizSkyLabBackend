@@ -94,6 +94,24 @@ func (q *Queries) GetAllProjects(ctx context.Context, arg GetAllProjectsParams) 
 	return items, nil
 }
 
+const getProject = `-- name: GetProject :one
+SELECT id, name, description, created_at, updated_at, deleted_at FROM projects WHERE deleted_at IS NULL AND id = $1
+`
+
+func (q *Queries) GetProject(ctx context.Context, id int32) (Project, error) {
+	row := q.db.QueryRowContext(ctx, getProject, id)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getProjectWithDetails = `-- name: GetProjectWithDetails :many
 SELECT
     p.id,
@@ -123,7 +141,7 @@ LEFT JOIN project_users pu ON p.id = pu.project_id AND pu.role = 'lead' AND pu.d
 LEFT JOIN users l ON pu.user_id = l.id AND l.deleted_at IS NULL 
 LEFT JOIN team_projects tp ON p.id = tp.project_id AND tp.deleted_at IS NULL 
 LEFT JOIN teams t ON tp.team_id = t.id AND t.deleted_at IS NULL 
-LEFT JOIN project_users pm ON p.id = tm.project_id AND tm.role = 'member' AND tm.deleted_at IS NULL 
+LEFT JOIN project_users pm ON p.id = pm.project_id AND pm.role = 'member' AND pm.deleted_at IS NULL 
 LEFT JOIN users u on pm.user_id = u.id AND u.deleted_at IS NULL 
 WHERE p.id = $1 
 GROUP BY t.id, u.id, p.id, l.id

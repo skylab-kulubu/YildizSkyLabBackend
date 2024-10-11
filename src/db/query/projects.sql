@@ -1,6 +1,9 @@
 -- name: GetAllProjects :many
 SELECT * FROM projects WHERE deleted_at IS NULL LIMIT $1 OFFSET $2;
 
+-- name: GetProject :one 
+SELECT * FROM projects WHERE deleted_at IS NULL AND id = $1; 
+
 -- name: GetProjectWithDetails :many
 SELECT
     p.id,
@@ -30,7 +33,7 @@ LEFT JOIN project_users pu ON p.id = pu.project_id AND pu.role = 'lead' AND pu.d
 LEFT JOIN users l ON pu.user_id = l.id AND l.deleted_at IS NULL 
 LEFT JOIN team_projects tp ON p.id = tp.project_id AND tp.deleted_at IS NULL 
 LEFT JOIN teams t ON tp.team_id = t.id AND t.deleted_at IS NULL 
-LEFT JOIN project_users pm ON p.id = tm.project_id AND tm.role = 'member' AND tm.deleted_at IS NULL 
+LEFT JOIN project_users pm ON p.id = pm.project_id AND pm.role = 'member' AND pm.deleted_at IS NULL 
 LEFT JOIN users u on pm.user_id = u.id AND u.deleted_at IS NULL 
 WHERE p.id = $1 
 GROUP BY t.id, u.id, p.id, l.id;
