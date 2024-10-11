@@ -8,7 +8,6 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"time"
 )
 
@@ -179,42 +178,38 @@ SELECT
         u.department,
         u.date_of_birth,
         u.role,
-        json_agg(
-        	json_build_object(
-                        'team_id', t.id,
-                        'team_name', t.name,
-                        'team_description', t.description
-        	)
-        ) as teams,
-        json_agg(
-                json_build_object(
-                        'project_id', p.id,
-                        'projet_name', p.name,
-                        'project_description', p.description
-                )
-        )as projects
+        t.id as team_id,
+        t.name as team_name,
+        t.description as team_description,
+        p.id as project_id,
+        p.name as project_name,
+        p.description as project_description
 FROM users u
 LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN teams t ON tu.team_id = t.id
 LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p on pu.project_id = p.id
+LEFT JOIN projects p ON pu.project_id = p.id
 WHERE u.email = $1
-GROUP BY u.id
+GROUP BY u.id, t.id, p.id
 `
 
 type GetUserByEmailRow struct {
-	ID              int32           `json:"id"`
-	Name            string          `json:"name"`
-	LastName        string          `json:"last_name"`
-	Email           string          `json:"email"`
-	Password        string          `json:"password"`
-	TelephoneNumber string          `json:"telephone_number"`
-	University      string          `json:"university"`
-	Department      string          `json:"department"`
-	DateOfBirth     time.Time       `json:"date_of_birth"`
-	Role            string          `json:"role"`
-	Teams           json.RawMessage `json:"teams"`
-	Projects        json.RawMessage `json:"projects"`
+	ID                 int32          `json:"id"`
+	Name               string         `json:"name"`
+	LastName           string         `json:"last_name"`
+	Email              string         `json:"email"`
+	Password           string         `json:"password"`
+	TelephoneNumber    string         `json:"telephone_number"`
+	University         string         `json:"university"`
+	Department         string         `json:"department"`
+	DateOfBirth        time.Time      `json:"date_of_birth"`
+	Role               string         `json:"role"`
+	TeamID             sql.NullInt32  `json:"team_id"`
+	TeamName           sql.NullString `json:"team_name"`
+	TeamDescription    sql.NullString `json:"team_description"`
+	ProjectID          sql.NullInt32  `json:"project_id"`
+	ProjectName        sql.NullString `json:"project_name"`
+	ProjectDescription sql.NullString `json:"project_description"`
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -231,80 +226,97 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Department,
 		&i.DateOfBirth,
 		&i.Role,
-		&i.Teams,
-		&i.Projects,
+		&i.TeamID,
+		&i.TeamName,
+		&i.TeamDescription,
+		&i.ProjectID,
+		&i.ProjectName,
+		&i.ProjectDescription,
 	)
 	return i, err
 }
 
-const getUserWithDetails = `-- name: GetUserWithDetails :one
+const getUserWithDetails = `-- name: GetUserWithDetails :many
 SELECT
         u.id,
         u.name,
         u.last_name,
         u.email,
-        u.password,
         u.telephone_number,
         u.university,
         u.department,
         u.date_of_birth,
         u.role,
-        json_agg(
-        	json_build_object(
-                        'id', t.id,
-                        'name', t.name,
-                        'description', t.description
-        	)
-        )FILTER (WHERE t.id IS NOT NULL) as teams,
-        json_agg(
-                json_build_object(
-                        'project_id', p.id,
-                        'projet_name', p.name,
-                        'project_description', p.description
-                )
-        )FILTER (WHERE p.id IS NOT NULL) as projects
+        t.id as team_id,
+        t.name as team_name,
+        t.description as team_description,
+        p.id as project_id,
+        p.name as project_name,
+        p.description as project_description
 FROM users u
 LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN teams t ON tu.team_id = t.id
 LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p on pu.project_id = p.id
+LEFT JOIN projects p ON pu.project_id = p.id
 WHERE u.id = $1
-GROUP BY u.id
+GROUP BY u.id, t.id, p.id
 `
 
 type GetUserWithDetailsRow struct {
-	ID              int32           `json:"id"`
-	Name            string          `json:"name"`
-	LastName        string          `json:"last_name"`
-	Email           string          `json:"email"`
-	Password        string          `json:"password"`
-	TelephoneNumber string          `json:"telephone_number"`
-	University      string          `json:"university"`
-	Department      string          `json:"department"`
-	DateOfBirth     time.Time       `json:"date_of_birth"`
-	Role            string          `json:"role"`
-	Teams           json.RawMessage `json:"teams"`
-	Projects        json.RawMessage `json:"projects"`
+	ID                 int32          `json:"id"`
+	Name               string         `json:"name"`
+	LastName           string         `json:"last_name"`
+	Email              string         `json:"email"`
+	TelephoneNumber    string         `json:"telephone_number"`
+	University         string         `json:"university"`
+	Department         string         `json:"department"`
+	DateOfBirth        time.Time      `json:"date_of_birth"`
+	Role               string         `json:"role"`
+	TeamID             sql.NullInt32  `json:"team_id"`
+	TeamName           sql.NullString `json:"team_name"`
+	TeamDescription    sql.NullString `json:"team_description"`
+	ProjectID          sql.NullInt32  `json:"project_id"`
+	ProjectName        sql.NullString `json:"project_name"`
+	ProjectDescription sql.NullString `json:"project_description"`
 }
 
-func (q *Queries) GetUserWithDetails(ctx context.Context, id int32) (GetUserWithDetailsRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserWithDetails, id)
-	var i GetUserWithDetailsRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.LastName,
-		&i.Email,
-		&i.Password,
-		&i.TelephoneNumber,
-		&i.University,
-		&i.Department,
-		&i.DateOfBirth,
-		&i.Role,
-		&i.Teams,
-		&i.Projects,
-	)
-	return i, err
+func (q *Queries) GetUserWithDetails(ctx context.Context, id int32) ([]GetUserWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUserWithDetails, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetUserWithDetailsRow{}
+	for rows.Next() {
+		var i GetUserWithDetailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.LastName,
+			&i.Email,
+			&i.TelephoneNumber,
+			&i.University,
+			&i.Department,
+			&i.DateOfBirth,
+			&i.Role,
+			&i.TeamID,
+			&i.TeamName,
+			&i.TeamDescription,
+			&i.ProjectID,
+			&i.ProjectName,
+			&i.ProjectDescription,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserWithNoDetails = `-- name: GetUserWithNoDetails :one
@@ -330,92 +342,6 @@ func (q *Queries) GetUserWithNoDetails(ctx context.Context, id int32) (User, err
 		&i.DeletedAt,
 	)
 	return i, err
-}
-
-const getUserWithTeams = `-- name: GetUserWithTeams :many
-SELECT
-        u.id,
-        u.name,
-        u.last_name,
-        u.email,
-        u.password,
-        u.telephone_number,
-        u.university,
-        u.department,
-        u.date_of_birth,
-        u.role,
-        t.id as team_id,
-        t.name as team_name,
-        t.description as team_description,
-        p.id as project_id,
-        p.name as project_name,
-        p.description as project_description
-FROM users u
-LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t ON tu.team_id = t.id
-LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p ON pu.project_id = p.id
-WHERE u.id = $1
-GROUP BY u.id, t.id, p.id
-`
-
-type GetUserWithTeamsRow struct {
-	ID                 int32          `json:"id"`
-	Name               string         `json:"name"`
-	LastName           string         `json:"last_name"`
-	Email              string         `json:"email"`
-	Password           string         `json:"password"`
-	TelephoneNumber    string         `json:"telephone_number"`
-	University         string         `json:"university"`
-	Department         string         `json:"department"`
-	DateOfBirth        time.Time      `json:"date_of_birth"`
-	Role               string         `json:"role"`
-	TeamID             sql.NullInt32  `json:"team_id"`
-	TeamName           sql.NullString `json:"team_name"`
-	TeamDescription    sql.NullString `json:"team_description"`
-	ProjectID          sql.NullInt32  `json:"project_id"`
-	ProjectName        sql.NullString `json:"project_name"`
-	ProjectDescription sql.NullString `json:"project_description"`
-}
-
-func (q *Queries) GetUserWithTeams(ctx context.Context, id int32) ([]GetUserWithTeamsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUserWithTeams, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetUserWithTeamsRow{}
-	for rows.Next() {
-		var i GetUserWithTeamsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.LastName,
-			&i.Email,
-			&i.Password,
-			&i.TelephoneNumber,
-			&i.University,
-			&i.Department,
-			&i.DateOfBirth,
-			&i.Role,
-			&i.TeamID,
-			&i.TeamName,
-			&i.TeamDescription,
-			&i.ProjectID,
-			&i.ProjectName,
-			&i.ProjectDescription,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const overwriteUser = `-- name: OverwriteUser :one

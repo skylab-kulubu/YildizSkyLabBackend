@@ -4,39 +4,30 @@ Select * from users where deleted_at is null LIMIT $1 OFFSET $2;
 -- name: GetUserWithNoDetails :one
 SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL;
 
--- name: GetUserWithDetails :one
+-- name: GetUserWithDetails :many
 SELECT
         u.id,
         u.name,
         u.last_name,
         u.email,
-        u.password,
         u.telephone_number,
         u.university,
         u.department,
         u.date_of_birth,
         u.role,
-        json_agg(
-        	json_build_object(
-                        'id', t.id,
-                        'name', t.name,
-                        'description', t.description
-        	)
-        )FILTER (WHERE t.id IS NOT NULL) as teams,
-        json_agg(
-                json_build_object(
-                        'project_id', p.id,
-                        'projet_name', p.name,
-                        'project_description', p.description
-                )
-        )FILTER (WHERE p.id IS NOT NULL) as projects
+        t.id as team_id,
+        t.name as team_name,
+        t.description as team_description,
+        p.id as project_id,
+        p.name as project_name,
+        p.description as project_description
 FROM users u
 LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN teams t ON tu.team_id = t.id
 LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p on pu.project_id = p.id
+LEFT JOIN projects p ON pu.project_id = p.id
 WHERE u.id = $1
-GROUP BY u.id;
+GROUP BY u.id, t.id, p.id;
 
 
 -- name: GetUserByEmail :one
@@ -51,27 +42,19 @@ SELECT
         u.department,
         u.date_of_birth,
         u.role,
-        json_agg(
-        	json_build_object(
-                        'team_id', t.id,
-                        'team_name', t.name,
-                        'team_description', t.description
-        	)
-        ) as teams,
-        json_agg(
-                json_build_object(
-                        'project_id', p.id,
-                        'projet_name', p.name,
-                        'project_description', p.description
-                )
-        )as projects
+        t.id as team_id,
+        t.name as team_name,
+        t.description as team_description,
+        p.id as project_id,
+        p.name as project_name,
+        p.description as project_description
 FROM users u
 LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t on tu.team_id = t.id
+LEFT JOIN teams t ON tu.team_id = t.id
 LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p on pu.project_id = p.id
+LEFT JOIN projects p ON pu.project_id = p.id
 WHERE u.email = $1
-GROUP BY u.id;
+GROUP BY u.id, t.id, p.id;
 
 -- name: CheckUserIfExistByEmail :one
 SELECT * FROM users
@@ -144,29 +127,3 @@ UPDATE users SET
 WHERE
     id = $1
 returning *;
-
--- name: GetUserWithTeams :many
-SELECT
-        u.id,
-        u.name,
-        u.last_name,
-        u.email,
-        u.password,
-        u.telephone_number,
-        u.university,
-        u.department,
-        u.date_of_birth,
-        u.role,
-        t.id as team_id,
-        t.name as team_name,
-        t.description as team_description,
-        p.id as project_id,
-        p.name as project_name,
-        p.description as project_description
-FROM users u
-LEFT JOIN team_users tu ON u.id = tu.user_id
-LEFT JOIN teams t ON tu.team_id = t.id
-LEFT JOIN project_users pu ON u.id = pu.user_id
-LEFT JOIN projects p ON pu.project_id = p.id
-WHERE u.id = $1
-GROUP BY u.id, t.id, p.id;

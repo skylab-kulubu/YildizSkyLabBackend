@@ -7,7 +7,7 @@ package sqlc
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 )
 
 const createProject = `-- name: CreateProject :one
@@ -94,76 +94,110 @@ func (q *Queries) GetAllProjects(ctx context.Context, arg GetAllProjectsParams) 
 	return items, nil
 }
 
-const getProject = `-- name: GetProject :one
+const getProjectWithDetails = `-- name: GetProjectWithDetails :many
 SELECT
     p.id,
     p.name,
     p.description,
-    json_agg(
-        json_build_object(
-                'user_id', u.id,
-                'user_name', u.name,
-                'user_last_name', u.last_name,
-                'user_email', u.email,
-                'user_password', u.password,
-                'user_telephone_number', u.telephone_number,
-                'user_university', u.university,
-                'user_department', u.department,
-                'user_date_of_birth', u.date_of_birth,
-                'user_role', u.role
-        )
-    ) as leads,
-    json_agg(
-        json_build_object(
-                'user_id', u.id,
-                'user_name', u.name,
-                'user_last_name', u.last_name,
-                'user_email', u.email,
-                'user_password', u.password,
-                'user_telephone_number', u.telephone_number,
-                'user_university', u.university,
-                'user_department', u.department,
-                'user_date_of_birth', u.date_of_birth,
-                'user_role', u.role
-        )
-    ) as members,
-    json_agg(
-            json_build_object(
-                    'team_id', t.id,
-                    'team_name', t.name,
-                    'team_description', t.description
-            )
-    ) as teams
+    l.id AS lead_id,
+    l.name AS lead_name,
+    l.last_name AS lead_last_name,
+    l.email AS lead_email,
+    l.telephone_number AS lead_telephone_number,
+    l.university AS lead_university,
+    l.department AS lead_department,
+    l.date_of_birth AS lead_date_of_birth,
+    t.id AS team_id,
+    t.name AS team_name,
+    t.description AS team_description,
+    u.id AS member_id,
+    u.name AS member_name,
+    u.last_name AS member_last_name,
+    u.email AS member_email,
+    u.telephone_number AS member_telephone_number,
+    u.university AS member_university,
+    u.department AS member_department,
+    u.date_of_birth AS member_date_of_birth
 FROM projects p
-LEFT JOIN project_users pu ON p.id = pu.project_id AND pu.role = 'lead'
-LEFT JOIN users u on pu.user_id = u.id
-LEFT JOIN team_projects tp ON p.id = tp.project_id
-LEFT JOIN teams t on tp.team_id = t.id
-WHERE p.id = $1
-GROUP BY p.id
+LEFT JOIN project_users pu ON p.id = pu.project_id AND pu.role = 'lead' AND pu.deleted_at IS NULL
+LEFT JOIN users l ON pu.user_id = l.id AND l.deleted_at IS NULL 
+LEFT JOIN team_projects tp ON p.id = tp.project_id AND tp.deleted_at IS NULL 
+LEFT JOIN teams t ON tp.team_id = t.id AND t.deleted_at IS NULL 
+LEFT JOIN project_users pm ON p.id = tm.project_id AND tm.role = 'member' AND tm.deleted_at IS NULL 
+LEFT JOIN users u on pm.user_id = u.id AND u.deleted_at IS NULL 
+WHERE p.id = $1 
+GROUP BY t.id, u.id, p.id, l.id
 `
 
-type GetProjectRow struct {
-	ID          int32           `json:"id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Leads       json.RawMessage `json:"leads"`
-	Members     json.RawMessage `json:"members"`
-	Teams       json.RawMessage `json:"teams"`
+type GetProjectWithDetailsRow struct {
+	ID                    int32          `json:"id"`
+	Name                  string         `json:"name"`
+	Description           string         `json:"description"`
+	LeadID                sql.NullInt32  `json:"lead_id"`
+	LeadName              sql.NullString `json:"lead_name"`
+	LeadLastName          sql.NullString `json:"lead_last_name"`
+	LeadEmail             sql.NullString `json:"lead_email"`
+	LeadTelephoneNumber   sql.NullString `json:"lead_telephone_number"`
+	LeadUniversity        sql.NullString `json:"lead_university"`
+	LeadDepartment        sql.NullString `json:"lead_department"`
+	LeadDateOfBirth       sql.NullTime   `json:"lead_date_of_birth"`
+	TeamID                sql.NullInt32  `json:"team_id"`
+	TeamName              sql.NullString `json:"team_name"`
+	TeamDescription       sql.NullString `json:"team_description"`
+	MemberID              sql.NullInt32  `json:"member_id"`
+	MemberName            sql.NullString `json:"member_name"`
+	MemberLastName        sql.NullString `json:"member_last_name"`
+	MemberEmail           sql.NullString `json:"member_email"`
+	MemberTelephoneNumber sql.NullString `json:"member_telephone_number"`
+	MemberUniversity      sql.NullString `json:"member_university"`
+	MemberDepartment      sql.NullString `json:"member_department"`
+	MemberDateOfBirth     sql.NullTime   `json:"member_date_of_birth"`
 }
 
-func (q *Queries) GetProject(ctx context.Context, id int32) (GetProjectRow, error) {
-	row := q.db.QueryRowContext(ctx, getProject, id)
-	var i GetProjectRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Leads,
-		&i.Members,
-		&i.Teams,
-	)
-	return i, err
+func (q *Queries) GetProjectWithDetails(ctx context.Context, id int32) ([]GetProjectWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectWithDetails, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProjectWithDetailsRow{}
+	for rows.Next() {
+		var i GetProjectWithDetailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.LeadID,
+			&i.LeadName,
+			&i.LeadLastName,
+			&i.LeadEmail,
+			&i.LeadTelephoneNumber,
+			&i.LeadUniversity,
+			&i.LeadDepartment,
+			&i.LeadDateOfBirth,
+			&i.TeamID,
+			&i.TeamName,
+			&i.TeamDescription,
+			&i.MemberID,
+			&i.MemberName,
+			&i.MemberLastName,
+			&i.MemberEmail,
+			&i.MemberTelephoneNumber,
+			&i.MemberUniversity,
+			&i.MemberDepartment,
+			&i.MemberDateOfBirth,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateProject = `-- name: UpdateProject :one

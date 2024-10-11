@@ -7,7 +7,7 @@ package sqlc
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 )
 
 const createTeam = `-- name: CreateTeam :one
@@ -94,76 +94,110 @@ func (q *Queries) GetAllTeams(ctx context.Context, arg GetAllTeamsParams) ([]Tea
 	return items, nil
 }
 
-const getTeam = `-- name: GetTeam :one
-SELECT 
-        t.id,
-        t.name,
-        t.description,
-        json_agg(
-                json_build_object(
-                        'user_id', u.id,
-                        'user_name', u.name,
-                        'user_last_name', u.last_name,
-                        'user_email', u.email,
-                        'user_password', u.password,
-                        'user_telephone_number', u.telephone_number,
-                        'user_university', u.university,
-                        'user_department', u.department,
-                        'user_date_of_birth', u.date_of_birth,
-                        'user_role', u.role
-                )
-        ) as leads,
-        json_agg(
-                json_build_object(
-                        'user_id', u.id,
-                        'user_name', u.name,
-                        'user_last_name', u.last_name,
-                        'user_email', u.email,
-                        'user_password', u.password,
-                        'user_telephone_number', u.telephone_number,
-                        'user_university', u.university,
-                        'user_department', u.department,
-                        'user_date_of_birth', u.date_of_birth,
-                        'user_role', u.role
-                )
-        ) as members,
-        json_agg(
-                json_build_object(
-                        'project_id', p.id,
-                        'projet_name', p.name,
-                        'project_description', p.description
-                )
-        ) as projects
+const getTeamWithDetails = `-- name: GetTeamWithDetails :many
+SELECT
+    t.id,
+    t.name,
+    t.description,
+    l.id AS lead_id,
+    l.name AS lead_name,
+    l.last_name AS lead_last_name,
+    l.email AS lead_email,
+    l.telephone_number AS lead_telephone_number,
+    l.university AS lead_university,
+    l.department AS lead_department,
+    l.date_of_birth AS lead_date_of_birth,
+    p.id AS project_id,
+    p.name AS project_name,
+    p.description AS project_description,
+    u.id AS member_id,
+    u.name AS member_name,
+    u.last_name AS member_last_name,
+    u.email AS member_email,
+    u.telephone_number AS member_telephone_number,
+    u.university AS member_university,
+    u.department AS member_department,
+    u.date_of_birth AS member_date_of_birth
 FROM teams t
-LEFT JOIN team_users tu ON t.id = tu.team_id AND tu.role = 'lead'
-LEFT JOIN users u on tu.user_id = u.id
-LEFT JOIN team_projects tp ON t.id = tp.team_id
-LEFT JOIN projects p on tp.project_id = p.id
+LEFT JOIN team_users tu ON t.id = tu.team_id AND tu.role = 'lead' AND tu.deleted_at IS NULL
+LEFT JOIN users l ON tu.user_id = l.id AND l.deleted_at IS NULL
+LEFT JOIN team_projects tp ON t.id = tp.team_id AND tp.deleted_at IS NULL
+LEFT JOIN projects p ON tp.project_id = p.id AND p.deleted_at IS NULL
+LEFT JOIN team_users tm ON t.id = tm.team_id AND tm.role = 'member' AND tm.deleted_at IS NULL
+LEFT JOIN users u ON tm.user_id = u.id AND u.deleted_at IS NULL
 WHERE t.id = $1
-GROUP BY t.id
+GROUP BY t.id, u.id, p.id, l.id
 `
 
-type GetTeamRow struct {
-	ID          int32           `json:"id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Leads       json.RawMessage `json:"leads"`
-	Members     json.RawMessage `json:"members"`
-	Projects    json.RawMessage `json:"projects"`
+type GetTeamWithDetailsRow struct {
+	ID                    int32          `json:"id"`
+	Name                  string         `json:"name"`
+	Description           string         `json:"description"`
+	LeadID                sql.NullInt32  `json:"lead_id"`
+	LeadName              sql.NullString `json:"lead_name"`
+	LeadLastName          sql.NullString `json:"lead_last_name"`
+	LeadEmail             sql.NullString `json:"lead_email"`
+	LeadTelephoneNumber   sql.NullString `json:"lead_telephone_number"`
+	LeadUniversity        sql.NullString `json:"lead_university"`
+	LeadDepartment        sql.NullString `json:"lead_department"`
+	LeadDateOfBirth       sql.NullTime   `json:"lead_date_of_birth"`
+	ProjectID             sql.NullInt32  `json:"project_id"`
+	ProjectName           sql.NullString `json:"project_name"`
+	ProjectDescription    sql.NullString `json:"project_description"`
+	MemberID              sql.NullInt32  `json:"member_id"`
+	MemberName            sql.NullString `json:"member_name"`
+	MemberLastName        sql.NullString `json:"member_last_name"`
+	MemberEmail           sql.NullString `json:"member_email"`
+	MemberTelephoneNumber sql.NullString `json:"member_telephone_number"`
+	MemberUniversity      sql.NullString `json:"member_university"`
+	MemberDepartment      sql.NullString `json:"member_department"`
+	MemberDateOfBirth     sql.NullTime   `json:"member_date_of_birth"`
 }
 
-func (q *Queries) GetTeam(ctx context.Context, id int32) (GetTeamRow, error) {
-	row := q.db.QueryRowContext(ctx, getTeam, id)
-	var i GetTeamRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Description,
-		&i.Leads,
-		&i.Members,
-		&i.Projects,
-	)
-	return i, err
+func (q *Queries) GetTeamWithDetails(ctx context.Context, id int32) ([]GetTeamWithDetailsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTeamWithDetails, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetTeamWithDetailsRow{}
+	for rows.Next() {
+		var i GetTeamWithDetailsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.LeadID,
+			&i.LeadName,
+			&i.LeadLastName,
+			&i.LeadEmail,
+			&i.LeadTelephoneNumber,
+			&i.LeadUniversity,
+			&i.LeadDepartment,
+			&i.LeadDateOfBirth,
+			&i.ProjectID,
+			&i.ProjectName,
+			&i.ProjectDescription,
+			&i.MemberID,
+			&i.MemberName,
+			&i.MemberLastName,
+			&i.MemberEmail,
+			&i.MemberTelephoneNumber,
+			&i.MemberUniversity,
+			&i.MemberDepartment,
+			&i.MemberDateOfBirth,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateTeam = `-- name: UpdateTeam :one
